@@ -26,13 +26,13 @@ Route::get('/', function () {
 // })->middleware(['auth', 'verified'])->name('dashboard');
 
 
-Route::middleware(['auth', 'verified'])
-    ->prefix('super')
-    ->name('super.')
-    ->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        // route lainmu…
-    });
+//Route::middleware(['auth', 'verified'])
+    //->prefix('super')
+   // ->name('super.')
+   // ->group(function () {
+   //     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+     
+ //   });
 
 
 
