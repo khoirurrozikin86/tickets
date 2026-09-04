@@ -25,9 +25,18 @@ jobs:
           git reset --hard origin/main
 
           echo "==> Install Composer dependencies"
-          composer install --no-dev --optimize-autoloader --no-interaction
+          composer install \
+            --no-dev \
+            --optimize-autoloader \
+            --no-interaction
 
-          echo "==> Laravel maintenance"
+          echo "==> Install NPM dependencies"
+          npm ci
+
+          echo "==> Build React + Vite"
+          npm run build
+
+          echo "==> Laravel migration"
           php artisan migrate --force
 
           echo "==> Clear Laravel cache"
