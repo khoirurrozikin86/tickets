@@ -14,12 +14,12 @@ Route::middleware(['auth'])
     ->prefix('super')->name('super.')->group(function () {
 
 
-        Route::get(
-            '/',
-            [DashboardController::class, 'index']
-        )
-            ->name('dashboard')
-            ->middleware('permission:dashboard.view');
+        // Route::get(
+        //     '/',
+        //     [DashboardController::class, 'index']
+        // )
+        //     ->name('dashboard')
+        //     ->middleware('permission:dashboard.view');
 
         /* ===== Access Control ===== */
 
