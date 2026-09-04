@@ -23,10 +23,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
 
             UsersAndPermissionsSeeder::class,
-            OutletSeeder::class,
-            TicketQrcodeSeeder::class,
-            UserSeeder::class,
-            userOutletSeeder::class,
+
+
+
 
         ]);
     }

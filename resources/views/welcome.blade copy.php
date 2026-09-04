@@ -709,14 +709,14 @@
                 </div>
 
                 <h1 class="hero-title">
-                    Tiket
+                    Smart Scanner
                     <span class="accent">System.</span>
                 </h1>
 
                 <p class="hero-description">
-                    Pesan tiket Dusun Semilir dengan mudah dan cepat secara online.
-                    Nikmati berbagai wahana dan pengalaman seru tanpa perlu antre,
-                    cukup tunjukkan e-ticket Anda saat memasuki area wisata.
+                    Scanner tiket digital untuk validasi QR Code dan barcode
+                    secara cepat, aman, dan akurat. Pantau aktivitas scan
+                    dan laporan tiket dalam satu platform.
                 </p>
 
                 <div class="hero-actions">
@@ -774,7 +774,178 @@
         </section>
 
 
+        {{-- ========================= QUICK MENU ========================= --}}
+        <section class="quick-grid">
 
+            <div class="row g-3">
+
+                @can('scan-records.create')
+                    {{-- CAMERA --}}
+                    <div class="col-xl-4 col-md-6">
+
+                        <a href="{{ route('super.scan-records.camera') }}" class="quick-card">
+
+                            <div class="quick-icon">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                    <path
+                                        d="M14.5 4h-5L8 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-1.5-3z">
+                                    </path>
+                                    <circle cx="12" cy="13" r="3"></circle>
+
+                                </svg>
+
+                            </div>
+
+                            <div class="quick-content">
+
+                                <h4>Scan Camera</h4>
+
+                                <p>
+                                    Scan QR Code menggunakan kamera
+                                    dengan cepat dan mudah.
+                                </p>
+
+                                <span class="quick-action">
+                                    Mulai Scan
+                                </span>
+
+                            </div>
+
+                            <div class="quick-arrow">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+
+                                    <path d="M5 12h14"></path>
+                                    <path d="m12 5 7 7-7 7"></path>
+
+                                </svg>
+
+                            </div>
+
+                        </a>
+
+                    </div>
+
+
+                    {{-- BARCODE --}}
+                    <div class="col-xl-4 col-md-6">
+
+                        <a href="{{ route('super.scan-records.scanner') }}" class="quick-card quick-card-blue">
+
+                            <div class="quick-icon">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                    <path d="M4 7V5a1 1 0 0 1 1-1h2"></path>
+                                    <path d="M17 4h2a1 1 0 0 1 1 1v2"></path>
+                                    <path d="M20 17v2a1 1 0 0 1-1 1h-2"></path>
+                                    <path d="M7 20H5a1 1 0 0 1-1-1v-2"></path>
+                                    <path d="M8 8v8"></path>
+                                    <path d="M11 8v8"></path>
+                                    <path d="M14 8v8"></path>
+                                    <path d="M17 8v8"></path>
+
+                                </svg>
+
+                            </div>
+
+                            <div class="quick-content">
+
+                                <h4>Barcode Scanner</h4>
+
+                                <p>
+                                    Scan barcode tiket menggunakan
+                                    scanner perangkat.
+                                </p>
+
+                                <span class="quick-action">
+                                    Mulai Scan
+                                </span>
+
+                            </div>
+
+                            <div class="quick-arrow">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+
+                                    <path d="M5 12h14"></path>
+                                    <path d="m12 5 7 7-7 7"></path>
+
+                                </svg>
+
+                            </div>
+
+                        </a>
+
+                    </div>
+                @endcan
+
+
+                {{-- REPORT --}}
+                @can('scan-records.view')
+                    <div class="col-xl-4 col-md-6">
+
+                        <a href="{{ route('super.scan-records.index') }}" class="quick-card quick-card-gold">
+
+                            <div class="quick-icon">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="8" y1="13" x2="16" y2="13"></line>
+                                    <line x1="8" y1="17" x2="14" y2="17"></line>
+
+                                </svg>
+
+                            </div>
+
+                            <div class="quick-content">
+
+                                <h4>Report</h4>
+
+                                <p>
+                                    Lihat laporan dan statistik scan
+                                    secara lengkap.
+                                </p>
+
+                                <span class="quick-action">
+                                    Lihat Laporan
+                                </span>
+
+                            </div>
+
+                            <div class="quick-arrow">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+
+                                    <path d="M5 12h14"></path>
+                                    <path d="m12 5 7 7-7 7"></path>
+
+                                </svg>
+
+                            </div>
+
+                        </a>
+
+                    </div>
+                @endcan
+
+            </div>
+
+        </section>
 
 
         <div class="footer-note">

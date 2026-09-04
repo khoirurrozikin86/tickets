@@ -1,7 +1,7 @@
 <nav class="sidebar">
     <div class="sidebar-header">
         <a href="{{ route('super.dashboard') }}" class="sidebar-brand">
-            QR<span> Scan</span>
+            TICKET<span> </span>
         </a>
         <div class="sidebar-toggler not-active">
             <span></span><span></span><span></span>

@@ -7,12 +7,25 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Super\DashboardController;
 
 
-use App\Http\Controllers\Public\{HomeController, PageController, ContactController};
+use App\Http\Controllers\Public\{HomeController};
 
 
-Route::get('/', function () {
-    return view('welcome');
-});
+
+Route::get('/', [HomeController::class, 'index'])
+    ->name('public.home');
+
+
+Route::get('/checkout', [HomeController::class, 'checkout'])
+    ->name('ticket.checkout');
+
+
+Route::get('/reservation', [HomeController::class, 'reservation'])
+    ->name('ticket.reservation');
+
+
+// Route::get('/', function () {
+//     return view('welcome');
+// });
 
 
 
