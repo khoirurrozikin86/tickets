@@ -131,6 +131,62 @@
 
 
 
+            @can('products.view')
+                <li class="nav-item">
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-products" role="button"
+                        aria-expanded="{{ request()->routeIs('super.products.*') || request()->routeIs('super.product-prices.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-products">
+
+                        <i class="link-icon" data-feather="shopping-bag"></i>
+
+                        <span class="link-title">
+                            Product Prices
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down">
+                        </i>
+
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.products.*') || request()->routeIs('super.product-prices.*') ? 'show' : '' }}"
+                        id="menu-products">
+
+                        <ul class="nav sub-menu">
+
+
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.product-prices.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.product-prices.*') ? 'active' : '' }}">
+
+                                    Product Price
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </li>
+            @endcan
+
+
+
+            @can('holidays.view')
+                <li class="nav-item">
+                    <a href="{{ route('super.holidays.index') }}"
+                        class="nav-link {{ request()->routeIs('super.holidays.*') ? 'active' : '' }}">
+                        <i class="link-icon" data-feather="calendar"></i>
+                        <span class="link-title">Hari Libur</span>
+                    </a>
+                </li>
+            @endcan
+
+
+
 
 
 
