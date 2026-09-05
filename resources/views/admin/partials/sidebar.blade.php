@@ -394,11 +394,7 @@
 
 
 
-            @canany(['audit-logs.view'])
-                <li class="nav-item nav-category">
-                    SETTINGS
-                </li>
-            @endcanany
+
 
 
             @can('site-settings.view')
