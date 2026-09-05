@@ -28,6 +28,11 @@ class UsersAndPermissionsSeeder extends Seeder
             'permission' => ['menu', 'create', 'read', 'update', 'delete'],
             'products' => ['view', 'create', 'update', 'delete'],
             'holidays'   => ['view', 'create', 'update', 'delete'],
+            'discounts'   => ['view', 'create', 'update', 'delete'],
+            'audit-logs' => ['view', 'create', 'update', 'delete'],
+            'tickets' => ['view', 'create', 'update', 'delete', 'expire', 'cancel'],
+            'orders' => ['view', 'create', 'update', 'delete', 'cancel'],
+            'payments' => ['view', 'create', 'update', 'delete', 'cancel'],
 
 
 
@@ -54,6 +59,9 @@ class UsersAndPermissionsSeeder extends Seeder
 
             'products.view',
             'holidays.view',
+            'discounts.view',
+            'audit-logs.view',
+            'orders.view',
         ]);
 
         // 👨‍💼 ADMIN: CRUD penuh semua modul utama
@@ -73,6 +81,10 @@ class UsersAndPermissionsSeeder extends Seeder
 
 
 
+            'discounts.view',
+            'discounts.create',
+            'discounts.update',
+            'discounts.delete',
 
 
 
@@ -84,7 +96,27 @@ class UsersAndPermissionsSeeder extends Seeder
             'products.view',
             'products.create',
             'products.update',
-            'products.delete'
+            'products.delete',
+
+            'audit-logs.view',
+            'audit-logs.create',
+
+            'tickets.view',
+            'tickets.create',
+            'tickets.update',
+            'tickets.delete',
+
+            'orders.view',
+            'orders.create',
+            'orders.update',
+            'orders.delete',
+
+            'payments.view',
+            'payments.create',
+            'payments.update',
+            'payments.delete',
+
+
 
 
         ]);

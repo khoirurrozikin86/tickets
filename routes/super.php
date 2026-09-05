@@ -3,14 +3,15 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Super\{RoleController, PermissionController, UserManageController, UserController};
 use App\Http\Controllers\Admin\{
-    DashboardController,
-    OutletController,
-    TicketQrcodeController,
-    UserOutletController,
-    ScanController,
+
     ProductController,
     ProductPriceController,
     HolidayController,
+    discountController,
+    auditLogController,
+    TicketController,
+    OrderController,
+    paymentController,
 };
 
 Route::middleware(['auth'])
@@ -187,5 +188,161 @@ Route::middleware(['auth'])
                     'destroy',
                 ])->name('destroy')
                     ->middleware('permission:holidays.delete');
+            });
+
+
+
+
+        Route::prefix('discounts')
+            ->name('discounts.')
+            ->group(function () {
+
+                Route::get('/', [
+                    DiscountController::class,
+                    'index'
+                ])
+                    ->middleware('permission:discounts.view')
+                    ->name('index');
+
+                Route::get('/dt', [
+                    DiscountController::class,
+                    'dt'
+                ])
+                    ->middleware('permission:discounts.view')
+                    ->name('dt');
+
+                Route::post('/', [
+                    DiscountController::class,
+                    'store'
+                ])
+                    ->middleware('permission:discounts.create')
+                    ->name('store');
+
+                Route::put('/{discount}', [
+                    DiscountController::class,
+                    'update'
+                ])
+                    ->middleware('permission:discounts.update')
+                    ->name('update');
+
+                Route::delete('/{discount}', [
+                    DiscountController::class,
+                    'destroy'
+                ])
+                    ->middleware('permission:discounts.delete')
+                    ->name('destroy');
+            });
+
+
+
+        Route::prefix('audit-logs')
+            ->name('audit-logs.')
+            ->group(function () {
+
+                Route::get('/', [
+                    AuditLogController::class,
+                    'index'
+                ])
+                    ->middleware('permission:audit-logs.view')
+                    ->name('index');
+
+                Route::get('/dt', [
+                    AuditLogController::class,
+                    'dt'
+                ])
+                    ->middleware('permission:audit-logs.view')
+                    ->name('dt');
+
+                Route::get('/{auditLog}', [
+                    AuditLogController::class,
+                    'show'
+                ])
+                    ->middleware('permission:audit-logs.view')
+                    ->name('show');
+            });
+
+
+
+
+        Route::prefix('tickets')
+            ->name('tickets.')
+            ->group(function () {
+
+                // Monitoring ticket
+                Route::get('/', [TicketController::class, 'index'])
+                    ->middleware('permission:tickets.view')
+                    ->name('index');
+
+                // DataTables
+                Route::get('/dt', [TicketController::class, 'dt'])
+                    ->middleware('permission:tickets.view')
+                    ->name('dt');
+
+
+                Route::get('/export', [TicketController::class, 'export'])
+                    ->middleware('permission:tickets.view')
+                    ->name('export');
+
+                // Detail ticket
+                Route::get('/{ticket}', [TicketController::class, 'show'])
+                    ->middleware('permission:tickets.view')
+                    ->name('show');
+
+                // Cancel ticket
+                Route::put('/{ticket}/cancel', [TicketController::class, 'cancel'])
+                    ->middleware('permission:tickets.cancel')
+                    ->name('cancel');
+            });
+
+
+
+
+
+        Route::prefix('orders')
+            ->name('orders.')
+            ->group(function () {
+
+                Route::get('/', [OrderController::class, 'index'])
+                    ->middleware('permission:orders.view')
+                    ->name('index');
+
+                Route::get('/dt', [OrderController::class, 'dt'])
+                    ->middleware('permission:orders.view')
+                    ->name('dt');
+
+                Route::get('/export', [OrderController::class, 'export'])
+                    ->middleware('permission:orders.view')
+                    ->name('export');
+
+                Route::get('/{order}', [OrderController::class, 'show'])
+                    ->middleware('permission:orders.view')
+                    ->name('show');
+            });
+
+
+
+        Route::prefix('payments')
+            ->name('payments.')
+            ->group(function () {
+
+                // Monitoring payment
+                Route::get('/', [PaymentController::class, 'index'])
+                    ->middleware('permission:payments.view')
+                    ->name('index');
+
+                // DataTables
+                Route::get('/dt', [PaymentController::class, 'dt'])
+                    ->middleware('permission:payments.view')
+                    ->name('dt');
+
+                // Export Excel
+                Route::get('/export', [PaymentController::class, 'export'])
+                    ->middleware('permission:payments.view')
+                    ->name('export');
+
+                // Detail payment
+                Route::get('/{payment}', [PaymentController::class, 'show'])
+                    ->middleware('permission:payments.view')
+                    ->name('show');
             });
     });
