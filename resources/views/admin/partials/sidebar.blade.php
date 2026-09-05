@@ -96,199 +96,109 @@
 
 
             {{-- ================= MASTER ================= --}}
-            @canany(['outlets.view', 'ticket-qrcodes.view'])
+            @canany(['products.view'])
                 <li class="nav-item nav-category">MASTER</li>
             @endcanany
 
 
-            @can('outlets.view')
+            @can('products.view')
                 <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-outlets" role="button" aria-expanded="false"
-                        aria-controls="menu-outlets">
-                        <i class="link-icon" data-feather="hard-drive"></i>
-                        <span class="link-title">Outlets</span>
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-products" role="button" aria-expanded="false"
+                        aria-controls="menu-products">
+
+                        <i class="link-icon" data-feather="shopping-bag"></i>
+
+                        <span class="link-title">Products</span>
+
                         <i class="link-arrow" data-feather="chevron-down"></i>
                     </a>
-                    <div class="collapse {{ request()->routeIs('super.outlets.*') ? 'show' : '' }}" id="menu-outlets">
+
+                    <div class="collapse {{ request()->routeIs('super.products.*') ? 'show' : '' }}" id="menu-products">
+
                         <ul class="nav sub-menu">
+
                             <li class="nav-item">
-                                <a href="{{ route('super.outlets.index') }}"
-                                    class="nav-link {{ request()->routeIs('super.outlets.index') ? 'active' : '' }}">
+                                <a href="{{ route('super.products.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.products.index') ? 'active' : '' }}">
                                     Show
                                 </a>
                             </li>
+
                         </ul>
                     </div>
                 </li>
             @endcan
 
 
-            @can('ticket-qrcode.view')
+
+            @can('products.view')
                 <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-ticket-qrcode" role="button"
-                        aria-expanded="false" aria-controls="menu-ticket-qrcode">
-                        <i class="link-icon" data-feather="hard-drive"></i>
-                        <span class="link-title">Ticket Qrcode</span>
-                        <i class="link-arrow" data-feather="chevron-down"></i>
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-products" role="button"
+                        aria-expanded="{{ request()->routeIs('super.products.*') || request()->routeIs('super.product-prices.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-products">
+
+                        <i class="link-icon" data-feather="shopping-bag"></i>
+
+                        <span class="link-title">
+                            Product Prices
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down">
+                        </i>
+
                     </a>
-                    <div class="collapse {{ request()->routeIs('super.ticket-qrcode.*') ? 'show' : '' }}"
-                        id="menu-ticket-qrcode">
+
+                    <div class="collapse {{ request()->routeIs('super.products.*') || request()->routeIs('super.product-prices.*') ? 'show' : '' }}"
+                        id="menu-products">
+
                         <ul class="nav sub-menu">
+
+
                             <li class="nav-item">
-                                <a href="{{ route('super.ticket-qrcode.index') }}"
-                                    class="nav-link {{ request()->routeIs('super.ticket-qrcode.index') ? 'active' : '' }}">
-                                    Show
+
+                                <a href="{{ route('super.product-prices.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.product-prices.*') ? 'active' : '' }}">
+
+                                    Product Price
+
                                 </a>
+
                             </li>
+
                         </ul>
+
                     </div>
+
                 </li>
             @endcan
 
 
-            @can('user-outlets.view')
+
+            @can('holidays.view')
                 <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-user-outlets" role="button"
-                        aria-expanded="false" aria-controls="menu-user-outlets">
-                        <i class="link-icon" data-feather="hard-drive"></i>
-                        <span class="link-title">User Outlet</span>
-                        <i class="link-arrow" data-feather="chevron-down"></i>
+                    <a href="{{ route('super.holidays.index') }}"
+                        class="nav-link {{ request()->routeIs('super.holidays.*') ? 'active' : '' }}">
+                        <i class="link-icon" data-feather="calendar"></i>
+                        <span class="link-title">Hari Libur</span>
                     </a>
-                    <div class="collapse {{ request()->routeIs('super.user-outlets.*') ? 'show' : '' }}"
-                        id="menu-user-outlets">
-                        <ul class="nav sub-menu">
-                            <li class="nav-item">
-                                <a href="{{ route('super.user-outlets.index') }}"
-                                    class="nav-link {{ request()->routeIs('super.user-outlets.index') ? 'active' : '' }}">
-                                    Show
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
                 </li>
             @endcan
+
+
+
 
 
 
             {{-- ================= SCAN MANAGEMENT ================= --}}
-            @canany(['scan-records.view', 'scan-records.create'])
+            {{-- @canany(['products.view'])
                 <li class="nav-item nav-category">
-                    SCAN MANAGEMENT
+                    MANAGEMENT
                 </li>
-            @endcanany
+            @endcanany --}}
 
 
-            {{-- ====================================================== --}}
-            {{-- SCAN --}}
-            {{-- ====================================================== --}}
 
-            @can('scan-records.create')
-                <li class="nav-item">
-
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-scan" role="button"
-                        aria-expanded="{{ request()->routeIs('super.scan-records.camera', 'super.scan-records.scanner') ? 'true' : 'false' }}"
-                        aria-controls="menu-scan">
-
-                        <i class="link-icon" data-feather="maximize"></i>
-
-                        <span class="link-title">
-                            Scan
-                        </span>
-
-                        <i class="link-arrow" data-feather="chevron-down"></i>
-
-                    </a>
-
-
-                    <div class="collapse
-            {{ request()->routeIs('super.scan-records.camera', 'super.scan-records.scanner') ? 'show' : '' }}"
-                        id="menu-scan">
-
-                        <ul class="nav sub-menu">
-
-                            {{-- CAMERA --}}
-
-                            <li class="nav-item">
-
-                                <a href="{{ route('super.scan-records.camera') }}"
-                                    class="nav-link
-                        {{ request()->routeIs('super.scan-records.camera') ? 'active' : '' }}">
-
-                                    Camera Scanner
-
-                                </a>
-
-                            </li>
-
-
-                            {{-- BARCODE --}}
-
-                            <li class="nav-item">
-
-                                <a href="{{ route('super.scan-records.scanner') }}"
-                                    class="nav-link
-                        {{ request()->routeIs('super.scan-records.scanner') ? 'active' : '' }}">
-
-                                    Barcode Scanner
-
-                                </a>
-
-                            </li>
-
-                        </ul>
-
-                    </div>
-
-                </li>
-            @endcan
-
-
-            {{-- ====================================================== --}}
-            {{-- SCAN RECORD / REPORT --}}
-            {{-- ====================================================== --}}
-
-            @can('scan-records.view')
-                <li class="nav-item">
-
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-scan-report" role="button"
-                        aria-expanded="{{ request()->routeIs('super.scan-records.index') ? 'true' : 'false' }}"
-                        aria-controls="menu-scan-report">
-
-                        <i class="link-icon" data-feather="file-text"></i>
-
-                        <span class="link-title">
-                            Scan Record
-                        </span>
-
-                        <i class="link-arrow" data-feather="chevron-down"></i>
-
-                    </a>
-
-
-                    <div class="collapse
-            {{ request()->routeIs('super.scan-records.index') ? 'show' : '' }}"
-                        id="menu-scan-report">
-
-                        <ul class="nav sub-menu">
-
-                            <li class="nav-item">
-
-                                <a href="{{ route('super.scan-records.index') }}"
-                                    class="nav-link
-                        {{ request()->routeIs('super.scan-records.index') ? 'active' : '' }}">
-
-                                    Show
-
-                                </a>
-
-                            </li>
-
-                        </ul>
-
-                    </div>
-
-                </li>
-            @endcan
 
 
 

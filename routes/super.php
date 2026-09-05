@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\{
     TicketQrcodeController,
     UserOutletController,
     ScanController,
+    ProductController,
+    ProductPriceController,
+    HolidayController,
 };
 
 Route::middleware(['auth'])
@@ -270,5 +273,135 @@ Route::middleware(['auth'])
                 )
                     ->middleware('permission:scan-records.view')
                     ->name('export');
+            });
+
+
+
+
+
+
+
+
+
+
+
+        // PRODUCTS
+        Route::prefix('products')
+            ->name('products.')
+            ->group(function () {
+
+                Route::middleware('permission:products.view')
+                    ->get('/', [ProductController::class, 'index'])
+                    ->name('index');
+
+                Route::middleware('permission:products.view')
+                    ->get('/dt', [ProductController::class, 'dt'])
+                    ->name('dt');
+
+                Route::middleware('permission:products.create')
+                    ->post('/', [ProductController::class, 'store'])
+                    ->name('store');
+
+                Route::middleware('permission:products.update')
+                    ->put('/{product}', [ProductController::class, 'update'])
+                    ->name('update');
+
+                Route::middleware('permission:products.delete')
+                    ->delete('/{product}', [ProductController::class, 'destroy'])
+                    ->name('destroy');
+            });
+
+
+
+
+
+
+
+
+
+
+
+
+        Route::prefix('product-prices')
+            ->name('product-prices.')
+            ->group(function () {
+
+                // LIST / PAGE
+                Route::middleware('permission:products.view')
+                    ->get(
+                        '/',
+                        [ProductPriceController::class, 'index']
+                    )
+                    ->name('index');
+
+                // DATATABLE
+                Route::middleware('permission:products.view')
+                    ->get(
+                        '/dt',
+                        [ProductPriceController::class, 'dt']
+                    )
+                    ->name('dt');
+
+                // CREATE
+                Route::middleware('permission:products.create')
+                    ->post(
+                        '/',
+                        [ProductPriceController::class, 'store']
+                    )
+                    ->name('store');
+
+                // UPDATE
+                Route::middleware('permission:products.update')
+                    ->put(
+                        '/{productPrice}',
+                        [ProductPriceController::class, 'update']
+                    )
+                    ->name('update');
+
+                // DELETE
+                Route::middleware('permission:products.delete')
+                    ->delete(
+                        '/{productPrice}',
+                        [ProductPriceController::class, 'destroy']
+                    )
+                    ->name('destroy');
+            });
+
+
+
+
+        Route::prefix('holidays')
+            ->name('holidays.')
+            ->group(function () {
+
+                Route::get('/', [
+                    HolidayController::class,
+                    'index',
+                ])->name('index')
+                    ->middleware('permission:holidays.view');
+
+                Route::get('/dt', [
+                    HolidayController::class,
+                    'dt',
+                ])->name('dt')
+                    ->middleware('permission:holidays.view');
+
+                Route::post('/', [
+                    HolidayController::class,
+                    'store',
+                ])->name('store')
+                    ->middleware('permission:holidays.create');
+
+                Route::put('/{holiday}', [
+                    HolidayController::class,
+                    'update',
+                ])->name('update')
+                    ->middleware('permission:holidays.update');
+
+                Route::delete('/{holiday}', [
+                    HolidayController::class,
+                    'destroy',
+                ])->name('destroy')
+                    ->middleware('permission:holidays.delete');
             });
     });

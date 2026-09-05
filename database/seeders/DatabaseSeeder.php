@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
 
             UsersAndPermissionsSeeder::class,
+            ProductSeeder::class,
+            HolidaySeeder::class,
 
 
 
