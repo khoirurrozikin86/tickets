@@ -26,8 +26,6 @@ class UsersAndPermissionsSeeder extends Seeder
             'user'       => ['menu', 'create', 'read', 'update', 'delete'],
             'role'       => ['menu', 'create', 'read', 'update', 'delete'],
             'permission' => ['menu', 'create', 'read', 'update', 'delete'],
-            'outlets'    => ['view', 'create', 'update', 'delete'],
-            'user-outlets' => ['view', 'create', 'update', 'delete'],
             'products' => ['view', 'create', 'update', 'delete'],
             'holidays'   => ['view', 'create', 'update', 'delete'],
 
@@ -53,7 +51,7 @@ class UsersAndPermissionsSeeder extends Seeder
         // 👤 USER: hanya bisa lihat (read/view)
         $roles['user']->syncPermissions([
             'dashboard.view',
-            'outlets.view',
+
             'products.view',
             'holidays.view',
         ]);
@@ -76,15 +74,7 @@ class UsersAndPermissionsSeeder extends Seeder
 
 
 
-            'outlets.view',
-            'outlets.create',
-            'outlets.update',
-            'outlets.delete',
 
-            'ticket-qrcode.view',
-            'ticket-qrcode.create',
-            'ticket-qrcode.update',
-            'ticket-qrcode.delete',
 
             'holidays.view',
             'holidays.create',
