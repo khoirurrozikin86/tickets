@@ -73,7 +73,7 @@
                                     </div>
 
                                     <div class="hero-stat-value">
-                                        {{ $totalOutlets ?? 0 }}
+
                                     </div>
 
                                 </div>
@@ -99,7 +99,7 @@
                                     </div>
 
                                     <div class="hero-stat-value">
-                                        {{ number_format($totalToday ?? 0) }}
+
                                     </div>
 
                                 </div>
@@ -125,7 +125,7 @@
                                     </div>
 
                                     <div class="hero-stat-value">
-                                        {{ $totalUsers ?? '-' }}
+
                                     </div>
 
                                 </div>
@@ -174,393 +174,7 @@
 
 
 
-    {{-- ========================================================= --}}
-    {{-- QUICK ACCESS --}}
-    {{-- ========================================================= --}}
 
-    <div class="row g-3 mb-4">
-
-
-        {{-- ===================================================== --}}
-        {{-- CAMERA --}}
-        {{-- ===================================================== --}}
-
-        @can('scan-records.create')
-            <div class="col-xl-4 col-md-6">
-
-                <a href="{{ route('super.scan-records.camera') }}" class="quick-card quick-card-green">
-
-                    <div class="quick-icon">
-
-                        <i data-feather="camera"></i>
-
-                    </div>
-
-
-                    <div class="quick-content">
-
-                        <h5>
-                            Scan Camera
-                        </h5>
-
-                        <p>
-                            Scan QR Code menggunakan kamera
-                            dengan cepat dan mudah.
-                        </p>
-
-                        <span class="quick-action">
-                            Mulai Scan
-                        </span>
-
-                    </div>
-
-
-                    <div class="quick-arrow">
-
-                        <i data-feather="arrow-right"></i>
-
-                    </div>
-
-                </a>
-
-            </div>
-        @endcan
-
-
-        {{-- ===================================================== --}}
-        {{-- BARCODE --}}
-        {{-- ===================================================== --}}
-
-        @can('scan-records.create')
-            <div class="col-xl-4 col-md-6">
-
-                <a href="{{ route('super.scan-records.scanner') }}" class="quick-card quick-card-blue">
-
-                    <div class="quick-icon">
-
-                        <i data-feather="maximize"></i>
-
-                    </div>
-
-
-                    <div class="quick-content">
-
-                        <h5>
-                            Barcode Scanner
-                        </h5>
-
-                        <p>
-                            Scan barcode tiket menggunakan
-                            scanner perangkat.
-                        </p>
-
-                        <span class="quick-action">
-                            Mulai Scan
-                        </span>
-
-                    </div>
-
-
-                    <div class="quick-arrow">
-
-                        <i data-feather="arrow-right"></i>
-
-                    </div>
-
-                </a>
-
-            </div>
-        @endcan
-
-
-        {{-- ===================================================== --}}
-        {{-- REPORT --}}
-        {{-- ===================================================== --}}
-
-        @can('scan-records.view')
-            <div class="col-xl-4 col-md-6">
-
-                <a href="{{ route('super.scan-records.index') }}" class="quick-card quick-card-gold">
-
-                    <div class="quick-icon">
-
-                        <i data-feather="file-text"></i>
-
-                    </div>
-
-
-                    <div class="quick-content">
-
-                        <h5>
-                            Report
-                        </h5>
-
-                        <p>
-                            Lihat laporan dan statistik
-                            scan secara lengkap.
-                        </p>
-
-                        <span class="quick-action">
-                            Lihat Laporan
-                        </span>
-
-                    </div>
-
-
-                    <div class="quick-arrow">
-
-                        <i data-feather="arrow-right"></i>
-
-                    </div>
-
-                </a>
-
-            </div>
-        @endcan
-
-    </div>
-
-
-
-
-
-
-    {{-- ========================================================= --}}
-    {{-- TOTAL SCAN BY OUTLET --}}
-    {{-- ========================================================= --}}
-
-    <div class="card border-0 shadow-sm scan-chart-card mb-4">
-
-        <div class="card-body p-4">
-
-            {{-- HEADER --}}
-
-            <div class="d-flex justify-content-between align-items-start mb-3">
-
-                <div>
-
-                    <h5 class="fw-bold mb-1">
-                        Total Scan by Outlet
-                    </h5>
-
-                    <div class="text-muted small">
-
-                        Today's Scan:
-
-                        <span class="badge today-count">
-                            {{ number_format($totalToday) }}
-                        </span>
-
-                    </div>
-
-                </div>
-
-                <div class="small text-muted">
-
-                    {{ now()->format('d-m-Y') }}
-
-                </div>
-
-            </div>
-
-
-            {{-- CHART --}}
-
-            <div style="height: 430px;">
-
-                <canvas id="scanByOutletChart"></canvas>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-
-
-    {{-- ========================================================= --}}
-    {{-- RECENT SCANS --}}
-    {{-- ========================================================= --}}
-
-    <div class="card border-0 shadow-sm recent-scan-card">
-
-        <div class="card-body p-4">
-
-            {{-- HEADER --}}
-            <div class="d-flex align-items-center justify-content-between mb-4">
-
-                <div>
-                    <h5 class="fw-bold mb-1">
-                        Recent Scans
-                    </h5>
-
-                    <p class="text-muted small mb-0">
-                        10 transaksi scan terakhir
-                    </p>
-                </div>
-
-                <a href="{{ route('super.scan-records.index') }}" class="btn btn-sm btn-outline-success">
-
-                    See all
-
-                </a>
-
-            </div>
-
-
-            {{-- TABLE --}}
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle mb-0">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>Outlet</th>
-
-                            <th>Outlet Type</th>
-
-                            <th>User</th>
-
-                            <th>Barcode</th>
-
-                            <th>Ticket Type</th>
-
-                            <th>Method</th>
-
-                            <th>Scan Time</th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-                        @forelse($recentScans ?? [] as $scan)
-                            <tr>
-
-                                {{-- OUTLET --}}
-                                <td>
-
-                                    <span class="fw-semibold">
-
-                                        {{ $scan->outlet?->outlet_name ?? '-' }}
-
-                                    </span>
-
-                                </td>
-
-
-                                {{-- OUTLET TYPE --}}
-                                <td>
-
-                                    <span class="badge badge-outlet-type">
-
-                                        {{ $scan->outlet?->outlet_type ?? '-' }}
-
-                                    </span>
-
-                                </td>
-
-
-                                {{-- USER --}}
-                                <td>
-
-                                    {{ $scan->user?->name ?? '-' }}
-
-                                </td>
-
-
-                                {{-- BARCODE --}}
-                                <td>
-
-                                    <span class="fw-semibold">
-
-                                        {{ $scan->qrcode ?? '-' }}
-
-                                    </span>
-
-                                </td>
-
-
-                                {{-- TICKET TYPE --}}
-                                <td>
-
-                                    {{ $scan->ticket_type ?? '-' }}
-
-                                </td>
-
-
-                                {{-- METHOD --}}
-                                <td>
-
-                                    @if ($scan->scan_method === 'scanner')
-                                        <span class="badge bg-success-subtle text-success">
-
-                                            Barcode
-
-                                        </span>
-                                    @elseif ($scan->scan_method === 'camera')
-                                        <span class="badge bg-success-subtle text-success">
-
-                                            Camera
-
-                                        </span>
-                                    @else
-                                        <span class="badge bg-light text-muted">
-
-                                            {{ ucfirst($scan->scan_method ?? '-') }}
-
-                                        </span>
-                                    @endif
-
-                                </td>
-
-
-                                {{-- TIME --}}
-                                <td>
-
-                                    <span class="scan-time">
-
-                                        {{ $scan->scanned_at ? $scan->scanned_at->format('d-m-Y H:i:s') : '-' }}
-
-                                    </span>
-
-                                </td>
-
-                            </tr>
-
-                        @empty
-
-                            <tr>
-
-                                <td colspan="7" class="text-center text-muted py-5">
-
-                                    <i data-feather="inbox" style="width:32px;height:32px;" class="mb-2">
-                                    </i>
-
-                                    <div>
-                                        Belum ada transaksi scan.
-                                    </div>
-
-                                </td>
-
-                            </tr>
-                        @endforelse
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    </div>
 
 @endsection
 
@@ -568,8 +182,8 @@
     <style>
         /* Hero gradient + animation */
         /* =========================================================
-                                                                                   DASHBOARD HERO
-                                                                                   ========================================================= */
+                                                                                           DASHBOARD HERO
+                                                                                           ========================================================= */
 
         .dashboard-hero {
             position: relative;
@@ -615,8 +229,8 @@
 
 
         /* =========================================================
-                                                                                   HERO CONTENT
-                                                                                   ========================================================= */
+                                                                                           HERO CONTENT
+                                                                                           ========================================================= */
 
         .hero-content {
             position: relative;
@@ -665,8 +279,8 @@
 
 
         /* =========================================================
-                                                                                   HERO STAT
-                                                                                   ========================================================= */
+                                                                                           HERO STAT
+                                                                                           ========================================================= */
 
         .hero-stat {
             display: flex;
@@ -725,8 +339,8 @@
 
 
         /* =========================================================
-                                                                                   OSIL
-                                                                                   ========================================================= */
+                                                                                           OSIL
+                                                                                           ========================================================= */
 
         .osil-wrapper {
             position: relative;
@@ -772,8 +386,8 @@
 
 
         /* =========================================================
-                                                                                   OSIL MESSAGE
-                                                                                   ========================================================= */
+                                                                                           OSIL MESSAGE
+                                                                                           ========================================================= */
 
         .osil-message {
             position: absolute;
@@ -830,8 +444,8 @@
 
 
         /* =========================================================
-                                                                                   QUICK ACCESS CARD
-                                                                                   ========================================================= */
+                                                                                           QUICK ACCESS CARD
+                                                                                           ========================================================= */
 
         .quick-card {
             position: relative;
@@ -936,8 +550,8 @@
 
 
         /* =========================================================
-                                                                                   QUICK CONTENT
-                                                                                   ========================================================= */
+                                                                                           QUICK CONTENT
+                                                                                           ========================================================= */
 
         .quick-content {
             position: relative;
@@ -966,8 +580,8 @@
 
 
         /* =========================================================
-                                                                                   ARROW
-                                                                                   ========================================================= */
+                                                                                           ARROW
+                                                                                           ========================================================= */
 
         .quick-arrow {
             position: relative;
@@ -995,8 +609,8 @@
 
 
         /* =========================================================
-                                                                                   RESPONSIVE
-                                                                                   ========================================================= */
+                                                                                           RESPONSIVE
+                                                                                           ========================================================= */
 
         @media (max-width: 991px) {
 
@@ -1062,233 +676,4 @@
 
         }
     </style>
-@endpush
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
-
-
-
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-
-            const canvas = document.getElementById(
-                'scanByOutletChart'
-            );
-
-            if (!canvas) {
-                return;
-            }
-
-
-            const labels = @json($outletLabels);
-
-            const totals = @json($outletTotals);
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | CREATE GRADIENT
-            |--------------------------------------------------------------------------
-            */
-
-            const ctx = canvas.getContext('2d');
-
-            const gradient = ctx.createLinearGradient(
-                0,
-                0,
-                0,
-                400
-            );
-
-            gradient.addColorStop(
-                0,
-                '#22c55e'
-            );
-
-            gradient.addColorStop(
-                1,
-                '#10b981'
-            );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | CHART
-            |--------------------------------------------------------------------------
-            */
-
-            new Chart(ctx, {
-
-                type: 'bar',
-
-                data: {
-
-                    labels: labels,
-
-                    datasets: [{
-
-                        label: 'Total Scan',
-
-                        data: totals,
-
-                        backgroundColor: gradient,
-
-                        borderRadius: 6,
-
-                        borderSkipped: false,
-
-                        barThickness: 12,
-
-                        maxBarThickness: 16
-
-                    }]
-
-                },
-
-
-                options: {
-
-                    responsive: true,
-
-                    maintainAspectRatio: false,
-
-
-                    plugins: {
-
-                        legend: {
-                            display: false
-                        },
-
-                        tooltip: {
-
-                            backgroundColor: '#1f2937',
-
-                            padding: 10,
-
-                            displayColors: false,
-
-                            callbacks: {
-
-                                label: function(context) {
-
-                                    return (
-                                        ' ' +
-                                        context.raw +
-                                        ' scan'
-                                    );
-
-                                }
-
-                            }
-
-                        }
-
-                    },
-
-
-                    scales: {
-
-                        x: {
-
-                            grid: {
-                                display: false
-                            },
-
-                            ticks: {
-
-                                color: '#64748b',
-
-                                font: {
-                                    size: 10
-                                },
-
-                                maxRotation: 90,
-
-                                minRotation: 90
-
-                            }
-
-                        },
-
-
-                        y: {
-
-                            beginAtZero: true,
-
-                            ticks: {
-
-                                color: '#64748b',
-
-                                precision: 0
-
-                            },
-
-                            grid: {
-
-                                color: '#eef2f3',
-
-                                drawBorder: false
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            });
-
-        });
-    </script>
-
-
-
-    <script>
-        // Feather icons
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.feather) feather.replace();
-        });
-
-        // Simple count-up without lib
-        (function() {
-            const els = document.querySelectorAll('.countup');
-            const easeOut = t => 1 - Math.pow(1 - t, 3);
-            const format = (n) => {
-                // format integer 1000+ with k
-                if (n >= 1000 && Number.isInteger(n)) return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'k';
-                return n.toLocaleString();
-            }
-            const onIntersect = (entries, obs) => {
-                entries.forEach(entry => {
-                    if (!entry.isIntersecting) return;
-                    const el = entry.target;
-                    const target = parseFloat(el.dataset.target || '0');
-                    const duration = 1200;
-                    const start = performance.now();
-                    const isPercent = el.textContent.trim().endsWith('%');
-                    const step = (now) => {
-                        const p = Math.min(1, (now - start) / duration);
-                        const val = target * easeOut(p);
-                        el.textContent = isPercent ? (val.toFixed(0)) : (Number.isInteger(target) ? Math
-                            .round(val) : val.toFixed(2));
-                        if (p < 1) requestAnimationFrame(step);
-                        else el.textContent = isPercent ? (target.toFixed(0)) : format(Number.isInteger(
-                            target) ? target : Number(target.toFixed(2)));
-                    };
-                    requestAnimationFrame(step);
-                    obs.unobserve(el);
-                });
-            };
-            const io = new IntersectionObserver(onIntersect, {
-                threshold: .4
-            });
-            els.forEach(el => io.observe(el));
-        })();
-    </script>
 @endpush
