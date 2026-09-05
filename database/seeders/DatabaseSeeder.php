@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             DiscountSeeder::class,
             PaymentSeeder::class,
             TicketSeeder::class,
+            SiteSettingSeeder::class,
 
         ]);
     }

@@ -394,6 +394,53 @@
 
 
 
+            @canany(['audit-logs.view'])
+                <li class="nav-item nav-category">
+                    SETTINGS
+                </li>
+            @endcanany
+
+
+            @can('site-settings.view')
+                <li class="nav-item nav-category">
+                    WEBSITE
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-site-settings" role="button"
+                        aria-expanded="{{ request()->routeIs('super.site-settings.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-site-settings">
+
+                        <i class="link-icon" data-feather="settings"></i>
+
+                        <span class="link-title">
+                            Site Settings
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.site-settings.*') ? 'show' : '' }}"
+                        id="menu-site-settings">
+
+                        <ul class="nav sub-menu">
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.site-settings.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.site-settings.index') ? 'active' : '' }}">
+                                    Show
+                                </a>
+
+                            </li>
+                        </ul>
+
+                    </div>
+                </li>
+            @endcan
+
+
+
+
 
 
 

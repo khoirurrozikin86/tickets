@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class SiteSetting extends Model
+{
+    protected $fillable = [
+        'key',
+        'label',
+        'value',
+        'type',
+        'group',
+        'description',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+}
