@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\{
     TicketController,
     OrderController,
     paymentController,
+    SiteSettingController,
 };
 
 Route::middleware(['auth'])
@@ -344,5 +345,19 @@ Route::middleware(['auth'])
                 Route::get('/{payment}', [PaymentController::class, 'show'])
                     ->middleware('permission:payments.view')
                     ->name('show');
+            });
+
+
+        Route::prefix('site-settings')
+            ->name('site-settings.')
+            ->group(function () {
+
+                Route::get('/', [SiteSettingController::class, 'index'])
+                    ->middleware('permission:site-settings.view')
+                    ->name('index');
+
+                Route::put('/', [SiteSettingController::class, 'update'])
+                    ->middleware('permission:site-settings.update')
+                    ->name('update');
             });
     });
