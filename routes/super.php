@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\{
     TicketQrcodeController,
     UserOutletController,
     ScanController,
+    ProductController,
 };
 
 Route::middleware(['auth'])
@@ -270,5 +271,41 @@ Route::middleware(['auth'])
                 )
                     ->middleware('permission:scan-records.view')
                     ->name('export');
+            });
+
+
+
+
+
+
+
+
+
+
+
+        // PRODUCTS
+        Route::prefix('products')
+            ->name('products.')
+            ->group(function () {
+
+                Route::middleware('permission:products.view')
+                    ->get('/', [ProductController::class, 'index'])
+                    ->name('index');
+
+                Route::middleware('permission:products.view')
+                    ->get('/dt', [ProductController::class, 'dt'])
+                    ->name('dt');
+
+                Route::middleware('permission:products.create')
+                    ->post('/', [ProductController::class, 'store'])
+                    ->name('store');
+
+                Route::middleware('permission:products.update')
+                    ->put('/{product}', [ProductController::class, 'update'])
+                    ->name('update');
+
+                Route::middleware('permission:products.delete')
+                    ->delete('/{product}', [ProductController::class, 'destroy'])
+                    ->name('destroy');
             });
     });
