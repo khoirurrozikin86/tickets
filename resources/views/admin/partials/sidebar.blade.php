@@ -180,22 +180,220 @@
                     <a href="{{ route('super.holidays.index') }}"
                         class="nav-link {{ request()->routeIs('super.holidays.*') ? 'active' : '' }}">
                         <i class="link-icon" data-feather="calendar"></i>
-                        <span class="link-title">Hari Libur</span>
+                        <span class="link-title">Holidays</span>
                     </a>
                 </li>
             @endcan
 
 
 
+            @can('discounts.view')
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-discounts" role="button"
+                        aria-expanded="{{ request()->routeIs('super.discounts.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-discounts">
 
+                        <i class="link-icon" data-feather="percent"></i>
 
+                        <span class="link-title">
+                            Discount
+                        </span>
 
-            {{-- ================= SCAN MANAGEMENT ================= --}}
-            {{-- @canany(['products.view'])
-                <li class="nav-item nav-category">
-                    MANAGEMENT
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.discounts.*') ? 'show' : '' }}"
+                        id="menu-discounts">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.discounts.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.discounts.index') ? 'active' : '' }}">
+
+                                    Show
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
                 </li>
-            @endcanany --}}
+            @endcan
+
+
+
+
+            {{-- ================= SYSTEM ================= --}}
+            @canany(['audit-logs.view'])
+                <li class="nav-item nav-category">
+                    SYSTEM
+                </li>
+            @endcanany
+
+            @can('audit-logs.view')
+                <li class="nav-item">
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-audit-logs" role="button"
+                        aria-expanded="{{ request()->routeIs('super.audit-logs.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-audit-logs">
+
+                        <i class="link-icon" data-feather="activity"></i>
+
+                        <span class="link-title">
+                            Audit Log
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.audit-logs.*') ? 'show' : '' }}"
+                        id="menu-audit-logs">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.audit-logs.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.audit-logs.index') ? 'active' : '' }}">
+                                    Show
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </li>
+            @endcan
+
+
+
+
+            {{-- TRANSAKSI --}}
+            @can('tickets.view')
+                <li class="nav-item nav-category">
+                    TRANSAKSI
+                </li>
+            @endcan
+
+            @can('tickets.view')
+                <li class="nav-item">
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-tickets" role="button"
+                        aria-expanded="{{ request()->routeIs('super.tickets.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-tickets">
+
+                        <i class="link-icon" data-feather="tag"></i>
+
+                        <span class="link-title">
+                            Ticket
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.tickets.*') ? 'show' : '' }}" id="menu-tickets">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.tickets.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.tickets.index', 'super.tickets.show') ? 'active' : '' }}">
+
+                                    Monitoring
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </li>
+            @endcan
+
+
+
+            @can('orders.view')
+                <li class="nav-item">
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-orders" role="button"
+                        aria-expanded="{{ request()->routeIs('super.orders.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-orders">
+
+                        <i class="link-icon" data-feather="shopping-cart"></i>
+
+                        <span class="link-title">
+                            Order
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.orders.*') ? 'show' : '' }}" id="menu-orders">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.orders.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.orders.index', 'super.orders.show') ? 'active' : '' }}">
+                                    Monitoring
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </li>
+            @endcan
+
+
+            @can('payments.view')
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-payments" role="button"
+                        aria-expanded="{{ request()->routeIs('super.payments.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-payments">
+
+                        <i class="link-icon" data-feather="credit-card"></i>
+
+                        <span class="link-title">Payment</span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.payments.*') ? 'show' : '' }}" id="menu-payments">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+                                <a href="{{ route('super.payments.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.payments.index') ? 'active' : '' }}">
+                                    Monitoring
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </div>
+                </li>
+            @endcan
+
+
+
+
 
 
 
