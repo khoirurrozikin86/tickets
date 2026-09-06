@@ -11,9 +11,9 @@ use App\Http\Controllers\Admin\{
     auditLogController,
     TicketController,
     OrderController,
-    paymentController,
+    PaymentController,
     SiteSettingController,
-    bannerController,
+    BannerController,
 };
 
 Route::middleware(['auth'])
