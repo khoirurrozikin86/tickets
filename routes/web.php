@@ -7,27 +7,65 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Super\DashboardController;
 
 
-use App\Http\Controllers\Public\{HomeController};
+use App\Http\Controllers\Public\{HomeController, TicketController, CheckoutController, PaymentController, ReservationController};
+
+
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 
 
 Route::get('/', [HomeController::class, 'index'])
-    ->name('public.home');
+    ->name('home');
 
 
-Route::get('/checkout', [HomeController::class, 'checkout'])
-    ->name('ticket.checkout');
 
 
-Route::get('/reservation', [HomeController::class, 'reservation'])
-    ->name('ticket.reservation');
+Route::prefix('tickets')
+    ->name('public.tickets.')
+    ->group(function () {
+
+        Route::get('/{product:slug}', [
+            TicketController::class,
+            'show',
+        ])->name('show');
+
+        Route::get('/{product:slug}/price', [
+            TicketController::class,
+            'price',
+        ])->name('price');
+    });
 
 
-// Route::get('/', function () {
-//     return view('welcome');
-// });
+Route::post('/tickets/{product:slug}/voucher', [
+    TicketController::class,
+    'voucher',
+])->name('voucher');
+
+Route::get('/checkout', [
+    CheckoutController::class,
+    'show',
+])->name('public.checkout');
+
+Route::post('/checkout', [
+    CheckoutController::class,
+    'store',
+])->name('public.checkout.store');
 
 
+Route::get('/payment', [
+    PaymentController::class,
+    'show',
+])->name('public.payment');
+
+Route::get('/reservasi', [ReservationController::class, 'index'])
+    ->name('public.reservation');
+
+Route::post('/reservasi', [ReservationController::class, 'search'])
+    ->name('public.reservation.search');
+
+Route::get('/reservasi/{order:order_number}', [ReservationController::class, 'show'])
+    ->name('public.reservation.show');
 
 
 // Route::get('/', HomeController::class)->name('home');
