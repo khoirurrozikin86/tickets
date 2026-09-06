@@ -1,12 +1,12 @@
 import HeroSlider, {
     Banner,
-} from '@/components/public/HeroSlider';
+} from '../../components/public/HeroSlider';
 
 import ProductCard, {
     Product,
-} from '@/components/public/ProductCard';
+} from '../../components/public/ProductCard';
 
-import PublicLayout from '@/layouts/PublicLayout';
+import PublicLayout from '../../layouts/PublicLayout';
 
 interface HomeProps {
     banners: Banner[];

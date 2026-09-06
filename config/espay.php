@@ -2,34 +2,64 @@
 
 return [
 
+    /*
+    |--------------------------------------------------------------------------
+    | Environment
+    |--------------------------------------------------------------------------
+    */
+
     'environment' => env('ESPAY_ENV', 'sandbox'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | API
+    |--------------------------------------------------------------------------
+    */
 
     'base_url' => env(
         'ESPAY_BASE_URL',
         'https://sandbox-api.espay.id'
     ),
 
-    'partner_id' => env('ESPAY_PARTNER_ID'),
+    'qris_endpoint' => '/api/v1.0/qr/qr-mpm-generate',
 
-    'merchant_id' => env('ESPAY_MERCHANT_ID'),
+    'timeout' => (int) env('ESPAY_TIMEOUT', 30),
 
-    'channel_id' => env(
-        'ESPAY_CHANNEL_ID',
-        'ESPAY'
-    ),
+    /*
+    |--------------------------------------------------------------------------
+    | Merchant
+    |--------------------------------------------------------------------------
+    */
+
+    'merchant_code' => env('ESPAY_MERCHANT_CODE'),
 
     'product_code' => env(
         'ESPAY_PRODUCT_CODE',
         'QRIS'
     ),
 
-    'private_key_path' => env(
-        'ESPAY_PRIVATE_KEY_PATH'
+    'channel_id' => env(
+        'ESPAY_CHANNEL_ID',
+        'ESPAY'
     ),
 
-    'timeout' => env(
-        'ESPAY_TIMEOUT',
-        30
+    /*
+    |--------------------------------------------------------------------------
+    | Credentials
+    |--------------------------------------------------------------------------
+    */
+
+    'api_password' => env('ESPAY_API_PASSWORD'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | RSA Private Key
+    |--------------------------------------------------------------------------
+    */
+
+    'private_key_path' => env(
+        'ESPAY_PRIVATE_KEY_PATH',
+        'storage/app/private/espay/private.key'
     ),
 
 ];

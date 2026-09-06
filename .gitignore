@@ -16,6 +16,8 @@
 /storage/framework/views/*
 /storage/logs/*
 
+/storage/app/private/espay/
+
 # IDE
 .idea/
 .vscode/

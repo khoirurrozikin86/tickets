@@ -2,8 +2,8 @@ import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 
-import PublicLayout from '@/layouts/PublicLayout';
-import { formatRupiah } from '@/lib/format';
+import PublicLayout from '../../layouts/PublicLayout';
+import { formatRupiah } from '../../lib/format';
 
 interface Product {
     id: number;
@@ -867,95 +867,56 @@ export default function TicketCheckout({
 
                             {/* Ticket */}
 
-                            <div className="mx-auto mt-16 max-w-[760px] rounded-[12px] border border-gray-100 bg-white px-7 py-6 shadow-[0_2px_5px_rgba(0,0,0,0.15)]">
-
-                                <div className="flex items-center justify-between gap-5">
-
-                                    {/* Name */}
-
-                                    <div className="min-w-0 flex-1">
-
-                                        <h3 className="text-[20px] font-bold text-gray-900">
-                                            {
-                                                product.name
-                                            }
+                            <div className="mx-auto mt-5 w-full max-w-[760px] rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_5px_rgba(0,0,0,0.12)] sm:mt-10 sm:p-6 lg:mt-16">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <h3 className="text-base font-bold text-gray-900 sm:text-xl">
+                                            {product.name}
                                         </h3>
 
-                                        <p className="mt-1 text-[13px] text-gray-700">
-                                            {
-                                                dayType
-                                                    ? `Promo ${DAY_TYPE_LABEL[
-                                                    dayType
-                                                    ] ??
-                                                    dayType
-                                                    }`
-                                                    : 'Harga tiket'
-                                            }
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            Promo {dayType ? DAY_TYPE_LABEL[dayType] : ''}
                                         </p>
-
                                     </div>
 
+                                    <p className="shrink-0 text-sm font-semibold text-gray-900 sm:text-base">
+                                        {price !== null
+                                            ? formatRupiah(price)
+                                            : 'Rp. 0'}
+                                    </p>
+                                </div>
 
-                                    {/* Quantity */}
+                                <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-600 sm:text-sm">
+                                            Jumlah Tiket
+                                        </p>
+                                    </div>
 
-                                    <div className="flex items-center gap-5">
-
+                                    <div className="flex items-center gap-3">
                                         <button
                                             type="button"
-                                            onClick={
-                                                decreaseQuantity
-                                            }
-                                            disabled={
-                                                quantity <=
-                                                0
-                                            }
-                                            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#159f79] text-xl font-bold leading-none text-white shadow-md transition hover:bg-[#108b69] disabled:cursor-not-allowed disabled:opacity-50"
+                                            onClick={decreaseQuantity}
+                                            disabled={quantity <= 0}
+                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#159f79] text-xl font-bold text-white disabled:opacity-40 sm:h-11 sm:w-11"
                                         >
                                             −
                                         </button>
 
-
-                                        <span className="w-4 text-center text-[22px] font-bold text-gray-900">
-                                            {
-                                                quantity
-                                            }
+                                        <span className="w-6 text-center text-base font-bold text-gray-900 sm:text-lg">
+                                            {quantity}
                                         </span>
-
 
                                         <button
                                             type="button"
-                                            onClick={
-                                                increaseQuantity
-                                            }
-                                            disabled={
-                                                quantity >=
-                                                20
-                                            }
-                                            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#159f79] text-xl font-bold leading-none text-white shadow-md transition hover:bg-[#108b69] disabled:opacity-50"
+                                            onClick={increaseQuantity}
+                                            disabled={quantity >= 20}
+                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#159f79] text-xl font-bold text-white disabled:opacity-50 sm:h-11 sm:w-11"
                                         >
                                             +
                                         </button>
-
                                     </div>
-
-
-                                    {/* Price */}
-
-                                    <div className="w-[150px] text-right">
-
-                                        <span className="text-[16px] font-medium text-gray-900">
-                                            {price !==
-                                                null
-                                                ? formatRupiah(
-                                                    price
-                                                )
-                                                : 'Rp. 0'}
-                                        </span>
-
-                                    </div>
-
                                 </div>
-
                             </div>
 
 
@@ -983,117 +944,31 @@ export default function TicketCheckout({
                                 VOUCHER
                             ================================================= */}
 
-                            <div className="mx-auto mt-6 max-w-[760px]">
+                            <div className="mx-auto mt-5 flex w-full max-w-[760px] gap-2 sm:mt-6">
+                                <input
+                                    type="text"
+                                    value={voucher}
+                                    onChange={(e) => {
+                                        setVoucher(e.target.value.toUpperCase());
+                                        setVoucherError('');
+                                        setVoucherMessage('');
+                                    }}
+                                    placeholder="KODE VOUCHER"
+                                    className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-[10px] uppercase outline-none focus:border-[#159f79] sm:text-sm"
+                                />
 
-                                {!voucherApplied ? (
-                                    <div className="flex gap-2">
-
-                                        <input
-                                            type="text"
-                                            value={
-                                                voucher
-                                            }
-                                            onChange={(
-                                                event
-                                            ) => {
-                                                setVoucher(
-                                                    event
-                                                        .target
-                                                        .value
-                                                        .toUpperCase()
-                                                );
-
-                                                setVoucherError(
-                                                    ''
-                                                );
-
-                                                setVoucherMessage(
-                                                    ''
-                                                );
-                                            }}
-                                            onKeyDown={(
-                                                event
-                                            ) => {
-                                                if (
-                                                    event.key ===
-                                                    'Enter'
-                                                ) {
-                                                    handleVoucher();
-                                                }
-                                            }}
-                                            placeholder="Kode voucher"
-                                            className="h-10 flex-1 rounded-lg border border-gray-200 px-4 text-sm uppercase outline-none transition focus:border-[#159f79] focus:ring-1 focus:ring-[#159f79]"
-                                        />
-
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                handleVoucher
-                                            }
-                                            disabled={
-                                                voucherLoading ||
-                                                quantity <=
-                                                0 ||
-                                                price ===
-                                                null
-                                            }
-                                            className="rounded-lg bg-[#159f79] px-5 text-sm font-semibold text-white transition hover:bg-[#108b69] disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {voucherLoading
-                                                ? '...'
-                                                : 'Gunakan'}
-                                        </button>
-
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-
-                                        <div>
-                                            <p className="text-sm font-bold text-emerald-800">
-                                                {
-                                                    voucherApplied.code
-                                                }
-                                            </p>
-
-                                            <p className="text-xs text-emerald-600">
-                                                {
-                                                    voucherApplied.name
-                                                }
-                                            </p>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                removeVoucher
-                                            }
-                                            className="text-xs font-semibold text-red-500 hover:text-red-700"
-                                        >
-                                            Hapus
-                                        </button>
-
-                                    </div>
-                                )}
-
-
-                                {voucherError && (
-                                    <p className="mt-2 text-xs text-red-500">
-                                        {
-                                            voucherError
-                                        }
-                                    </p>
-                                )}
-
-
-                                {voucherMessage &&
-                                    !voucherError && (
-                                        <p className="mt-2 text-xs text-emerald-600">
-                                            {
-                                                voucherMessage
-                                            }
-                                        </p>
-                                    )}
-
+                                <button
+                                    type="button"
+                                    onClick={handleVoucher}
+                                    disabled={
+                                        voucherLoading ||
+                                        quantity <= 0 ||
+                                        price === null
+                                    }
+                                    className="w-[70px] shrink-0 rounded-lg bg-[#159f79] px-2 text-[10px] font-semibold text-white disabled:opacity-50 sm:w-auto sm:px-5 sm:text-sm"
+                                >
+                                    {voucherLoading ? '...' : 'Gunakan'}
+                                </button>
                             </div>
 
 
@@ -1101,36 +976,20 @@ export default function TicketCheckout({
                                 TERM & CONDITION
                             ================================================= */}
 
-                            <div className="mx-auto mt-6 max-w-[760px]">
-
-                                <label className="flex cursor-pointer items-center gap-3 text-[14px] text-[#315fa9]">
-
+                            <div className="mx-auto mt-5 w-full max-w-[760px]">
+                                <label className="flex items-start gap-2 text-[9px] leading-4 text-[#315fa9] sm:gap-3 sm:text-sm sm:leading-6">
                                     <input
                                         type="checkbox"
-                                        checked={
-                                            agree
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            setAgree(
-                                                event
-                                                    .target
-                                                    .checked
-                                            )
-                                        }
-                                        className="h-[19px] w-[19px] accent-[#159f79]"
+                                        checked={agree}
+                                        onChange={(e) => setAgree(e.target.checked)}
+                                        className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#159f79] sm:h-4 sm:w-4"
                                     />
 
-                                    <span>
-                                        I agree with Term
-                                        And Condition and
-                                        Privacy Policy of
-                                        Saloka Theme Park
+                                    <span className="min-w-0 break-words">
+                                        I agree with Term And Condition and
+                                        Privacy Policy of Saloka Theme Park
                                     </span>
-
                                 </label>
-
                             </div>
 
 
@@ -1138,79 +997,47 @@ export default function TicketCheckout({
                                 TOTAL
                             ================================================= */}
 
-                            <div className="mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-8">
+                            <div className="mx-auto mt-6 w-full max-w-[760px] border-t border-gray-100 pt-5 sm:mt-8">
 
-                                <div className="text-left">
-
-                                    <p className="text-[13px] font-medium text-gray-700">
+                                <div>
+                                    <p className="text-[10px] text-gray-400 sm:text-xs">
                                         arrival date:
                                     </p>
 
-                                    <p className="mt-1 text-[18px] font-bold text-gray-900">
-                                        {
-                                            formatLongDate(
-                                                date
-                                            )
-                                        }
+                                    <p className="mt-1 text-sm font-bold leading-5 text-gray-900 sm:text-base">
+                                        {formatLongDate(date)}
                                     </p>
-
                                 </div>
 
+                                {/* TOTAL */}
+                                <div className="mt-4 rounded-2xl bg-gray-50 p-4 sm:p-5">
 
-                                <div className="flex items-center overflow-hidden rounded-full bg-white shadow-[0_2px_12px_rgba(0,0,0,0.18)]">
-
-                                    <div className="px-5 py-3 text-[15px] font-medium text-gray-900">
-
+                                    <div className="flex items-center justify-between gap-3">
                                         <div>
-                                            Rp.{' '}
-                                            {
-                                                formatNumber(
-                                                    total
-                                                )
-                                            }
+                                            <p className="text-[10px] text-gray-400 sm:text-xs">
+                                                Total pembayaran
+                                            </p>
+
+                                            <p className="mt-1 text-lg font-extrabold text-gray-900 sm:text-xl">
+                                                Rp. {formatNumber(total)}
+                                            </p>
                                         </div>
-
                                     </div>
-
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCheckout
-                                        }
+                                        onClick={handleCheckout}
                                         disabled={
-                                            quantity <=
-                                            0 ||
-                                            price ===
-                                            null ||
+                                            quantity <= 0 ||
+                                            price === null ||
                                             !agree ||
                                             loading
                                         }
-                                        className={`
-                                            h-[52px]
-                                            min-w-[130px]
-                                            rounded-full
-                                            px-6
-                                            text-[16px]
-                                            font-bold
-                                            transition
-
-                                            ${quantity >
-                                                0 &&
-                                                price !==
-                                                null &&
-                                                agree &&
-                                                !loading
-                                                ? 'bg-[#159f79] text-white hover:bg-[#108b69]'
-                                                : 'bg-[#dedede] text-[#a8a8a8]'
-                                            }
-                                        `}
+                                        className="mt-4 flex h-11 w-full items-center justify-center rounded-full bg-[#159f79] text-xs font-bold text-white transition hover:bg-[#108b69] disabled:cursor-not-allowed disabled:bg-[#dedede] disabled:text-[#a8a8a8] sm:h-12 sm:text-sm"
                                     >
                                         CHECKOUT
                                     </button>
-
                                 </div>
-
                             </div>
 
 
@@ -1227,7 +1054,7 @@ export default function TicketCheckout({
                                 </span>
 
                                 <a
-                                    href="/reservation"
+                                    href="/reservasi"
                                     className="font-medium text-[#315fa9] underline"
                                 >
                                     di sini

@@ -48,14 +48,14 @@ export default function Navbar({
                         </Link>
 
                         <Link
-                            href="/reservation"
+                            href="/reservasi"
                             className="hidden rounded-xl px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-emerald-50 hover:text-emerald-700 sm:block"
                         >
                             Cek Reservasi
                         </Link>
 
                         <Link
-                            href="/tickets"
+                            href="/#ticket"
                             className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-emerald-800"
                         >
                             Beli Tiket

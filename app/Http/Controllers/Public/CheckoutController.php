@@ -15,6 +15,9 @@ use App\Services\PriceResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
+
+use App\Services\EspayService;
 
 class CheckoutController extends Controller
 {
@@ -135,10 +138,7 @@ class CheckoutController extends Controller
             ->get(['key', 'value'])
             ->mapWithKeys(function ($setting) {
                 return [
-                    $setting->key => $this->imageSetting(
-                        $setting->key,
-                        $setting->value
-                    ),
+                    $setting->key => $setting->value,
                 ];
             })
             ->toArray();
@@ -281,7 +281,6 @@ class CheckoutController extends Controller
             $discount = Discount::query()
                 ->where('code', strtoupper(trim($validated['voucher'])))
                 ->where('is_active', true)
-                ->lockForUpdate()
                 ->first();
 
             if (!$discount) {
@@ -534,18 +533,66 @@ class CheckoutController extends Controller
         |--------------------------------------------------------------------------
         */
 
-            if ($discount) {
-                $discount->increment('usage_count');
-            }
 
             return $order;
         });
 
         /*
+
+
+
+
+
+
+
+
+
+
+        
     |--------------------------------------------------------------------------
     | Redirect ke halaman pembayaran
     |--------------------------------------------------------------------------
     */
+
+
+
+
+        $payment = Payment::query()
+            ->where('order_id', $order->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        try {
+            $espay = app(EspayService::class);
+
+            $qris = $espay->generateQris($payment);
+
+            $payment->update([
+                'gateway_reference' => $qris['reference_no'],
+                'payment_url' => $qris['qr_url'],
+                'qr_code' => $qris['qr_content'],
+                'metadata' => [
+                    'external_id' => $qris['external_id'],
+                    'response_code' => $qris['response_code'],
+                    'response_message' => $qris['response_message'],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ESPay QRIS generation failed', [
+                'order_number' => $order->order_number,
+                'payment_number' => $payment->payment_number,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+
+
+
+
+
+
+
+
 
         return redirect()->route('public.payment', [
             'order' => $order->order_token,

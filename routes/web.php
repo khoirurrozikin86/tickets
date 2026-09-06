@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Super\DashboardController;
 
 
-use App\Http\Controllers\Public\{HomeController, TicketController, CheckoutController, PaymentController};
+use App\Http\Controllers\Public\{HomeController, TicketController, CheckoutController, PaymentController, ReservationController};
 
 
 use Illuminate\Http\Request;
@@ -57,6 +57,15 @@ Route::get('/payment', [
     PaymentController::class,
     'show',
 ])->name('public.payment');
+
+Route::get('/reservasi', [ReservationController::class, 'index'])
+    ->name('public.reservation');
+
+Route::post('/reservasi', [ReservationController::class, 'search'])
+    ->name('public.reservation.search');
+
+Route::get('/reservasi/{order:order_number}', [ReservationController::class, 'show'])
+    ->name('public.reservation.show');
 
 
 // Route::get('/', HomeController::class)->name('home');
