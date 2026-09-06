@@ -1,943 +1,1390 @@
-import React, { useMemo, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
+import axios from 'axios';
+import { useEffect, useMemo, useState } from 'react';
 
-type Product = {
+import PublicLayout from '@/layouts/PublicLayout';
+import { formatRupiah } from '@/lib/format';
+
+interface Product {
     id: number;
     name: string;
-    category?: string;
-    description?: string;
-    image?: string | null;
-};
+    slug: string;
+    description?: string | null;
+}
 
-type TicketOption = {
-    id: number;
+interface VoucherResult {
+    code: string;
     name: string;
-    weekdayPrice: number;
-    weekendPrice: number;
-    allDay?: boolean;
-    active?: boolean;
-};
-
-type Promotion = {
-    id: number;
-    name: string;
-    type: 'percentage' | 'fixed';
+    type: string;
     value: number;
-    startDate: string;
-    endDate: string;
-    active?: boolean;
+}
+
+interface Props {
+    product: Product;
+
+    selectedDate: string;
+
+    dayType: string | null;
+
+    price: number | null;
+
+    priceError?: string | null;
+
+    minDate: string;
+
+    settings: Record<
+        string,
+        string | null | undefined
+    >;
+}
+
+const DAY_TYPE_LABEL: Record<string, string> = {
+    WEEKDAY: 'Weekday',
+    WEEKEND: 'Weekend',
+    HOLIDAY: 'Holiday',
 };
 
-type Customer = {
-    name: string;
-    phone: string;
-    email: string;
-    birthDate: string;
-    province: string;
-    city: string;
-};
-
-type Props = {
-    product?: Product;
-    ticketOptions?: TicketOption[];
-    promotions?: Promotion[];
-};
-
-const rupiah = (value: number) =>
-    new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        maximumFractionDigits: 0,
-    }).format(value);
-
-const formatLongDate = (date: Date) =>
-    new Intl.DateTimeFormat('id-ID', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    }).format(date);
-
-const dateKey = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-};
-
-const parseDate = (value: string) => {
-    const [y, m, d] = value.split('-').map(Number);
-    return new Date(y, m - 1, d);
-};
-
-const defaultTicketOptions: TicketOption[] = [
-    {
-        id: 1,
-        name: 'Tiket Reguler',
-        weekdayPrice: 80000,
-        weekendPrice: 100000,
-    },
-    {
-        id: 2,
-        name: 'Tiket Terusan',
-        weekdayPrice: 120000,
-        weekendPrice: 140000,
-    },
+const MONTH_NAMES = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
 ];
-
-const defaultPromotions: Promotion[] = [
-    {
-        id: 1,
-        name: 'Promo September',
-        type: 'percentage',
-        value: 15,
-        startDate: '2026-09-01',
-        endDate: '2026-09-30',
-        active: true,
-    },
-];
-
-const emptyCustomer: Customer = {
-    name: '',
-    phone: '',
-    email: '',
-    birthDate: '',
-    province: '',
-    city: '',
-};
-
-function Calendar({
-    value,
-    onChange,
-}: {
-    value: string;
-    onChange: (value: string) => void;
-}) {
-    const initial = value ? parseDate(value) : new Date();
-    const [month, setMonth] = useState(
-        new Date(initial.getFullYear(), initial.getMonth(), 1),
-    );
-
-    const year = month.getFullYear();
-    const monthIndex = month.getMonth();
-    const firstDay = new Date(year, monthIndex, 1).getDay();
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-    const previousMonthDays = new Date(year, monthIndex, 0).getDate();
-
-    const cells = Array.from({ length: 42 }, (_, index) => {
-        const dayNumber = index - firstDay + 1;
-
-        if (dayNumber < 1) {
-            return {
-                date: new Date(year, monthIndex - 1, previousMonthDays + dayNumber),
-                current: false,
-            };
-        }
-
-        if (dayNumber > daysInMonth) {
-            return {
-                date: new Date(year, monthIndex + 1, dayNumber - daysInMonth),
-                current: false,
-            };
-        }
-
-        return {
-            date: new Date(year, monthIndex, dayNumber),
-            current: true,
-        };
-    });
-
-    const selected = value ? dateKey(parseDate(value)) : '';
-
-    return (
-        <div>
-            <div className="mb-5 flex items-center justify-between">
-                <button
-                    type="button"
-                    onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}
-                    className="grid h-10 w-10 place-items-center rounded-full text-xl text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                >
-                    ‹
-                </button>
-
-                <div className="text-center">
-                    <div className="text-lg font-extrabold text-slate-900">
-                        {new Intl.DateTimeFormat('id-ID', {
-                            month: 'long',
-                        }).format(month)}
-                    </div>
-                    <div className="text-sm font-semibold text-slate-400">
-                        {year}
-                    </div>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}
-                    className="grid h-10 w-10 place-items-center rounded-full text-xl text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                >
-                    ›
-                </button>
-            </div>
-
-            <div className="mb-2 grid grid-cols-7 text-center text-xs font-bold uppercase tracking-wide text-slate-400">
-                {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((day) => (
-                    <div key={day} className="py-2">
-                        {day}
-                    </div>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-y-1">
-                {cells.map(({ date, current }, index) => {
-                    const key = dateKey(date);
-                    const isSelected = key === selected;
-                    const isPast =
-                        date <
-                        new Date(
-                            new Date().getFullYear(),
-                            new Date().getMonth(),
-                            new Date().getDate(),
-                        );
-
-                    return (
-                        <button
-                            key={`${key}-${index}`}
-                            type="button"
-                            disabled={isPast}
-                            onClick={() => onChange(key)}
-                            className={[
-                                'mx-auto grid h-10 w-10 place-items-center rounded-full text-sm font-semibold transition',
-                                current
-                                    ? 'text-slate-700 hover:bg-emerald-50 hover:text-emerald-700'
-                                    : 'text-slate-200',
-                                isSelected
-                                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 hover:bg-emerald-600 hover:text-white'
-                                    : '',
-                                isPast ? 'cursor-not-allowed opacity-40' : '',
-                            ].join(' ')}
-                        >
-                            {date.getDate()}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
-
-function Modal({
-    children,
-    onClose,
-}: {
-    children: React.ReactNode;
-    onClose?: () => void;
-}) {
-    return (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
-            <div className="relative max-h-[90vh] w-full max-w-xl overflow-auto rounded-[28px] bg-white p-7 shadow-2xl">
-                {onClose && (
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute right-5 top-5 grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
-                    >
-                        ×
-                    </button>
-                )}
-                {children}
-            </div>
-        </div>
-    );
-}
-
-function StepHeader({ step }: { step: number }) {
-    const labels = ['Tanggal & Tiket', 'Data Pemesan', 'Konfirmasi', 'Struk', 'Pembayaran'];
-
-    return (
-        <div className="mb-8 flex items-center justify-center gap-2 overflow-x-auto pb-1">
-            {labels.map((label, index) => {
-                const number = index + 1;
-                const active = step >= number;
-
-                return (
-                    <React.Fragment key={label}>
-                        <div className="flex shrink-0 items-center gap-2">
-                            <div
-                                className={[
-                                    'grid h-8 w-8 place-items-center rounded-full text-xs font-extrabold',
-                                    active
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'bg-slate-100 text-slate-400',
-                                ].join(' ')}
-                            >
-                                {number}
-                            </div>
-                            <span
-                                className={[
-                                    'hidden text-xs font-bold sm:block',
-                                    active ? 'text-emerald-700' : 'text-slate-400',
-                                ].join(' ')}
-                            >
-                                {label}
-                            </span>
-                        </div>
-                        {index < labels.length - 1 && (
-                            <div
-                                className={[
-                                    'h-px w-8 shrink-0 sm:w-14',
-                                    step > number ? 'bg-emerald-500' : 'bg-slate-200',
-                                ].join(' ')}
-                            />
-                        )}
-                    </React.Fragment>
-                );
-            })}
-        </div>
-    );
-}
 
 export default function TicketCheckout({
-    product = {
-        id: 1,
-        name: 'Tiket Reguler',
-        category: 'Reguler',
-    },
-    ticketOptions = defaultTicketOptions,
-    promotions = defaultPromotions,
+    product,
+    selectedDate,
+    dayType,
+    price,
+    priceError,
+    minDate,
+    settings,
 }: Props) {
-    const [step, setStep] = useState(1);
-    const [selectedDate, setSelectedDate] = useState('');
-    const [quantity, setQuantity] = useState(0);
-    const [customer, setCustomer] = useState<Customer>(emptyCustomer);
+    /*
+    |--------------------------------------------------------------------------
+    | State
+    |--------------------------------------------------------------------------
+    */
+
+    const [date, setDate] =
+        useState(selectedDate);
+
+    const [quantity, setQuantity] =
+        useState(0);
+
+    const [agree, setAgree] =
+        useState(false);
+
+    const [voucher, setVoucher] =
+        useState('');
+
+    const [voucherApplied, setVoucherApplied] =
+        useState<VoucherResult | null>(null);
+
+    const [discountAmount, setDiscountAmount] =
+        useState(0);
+
+    const [voucherMessage, setVoucherMessage] =
+        useState('');
+
+    const [voucherError, setVoucherError] =
+        useState('');
+
+    const [voucherLoading, setVoucherLoading] =
+        useState(false);
+
+    const [loading, setLoading] =
+        useState(false);
+
+
     const [showDateConfirmation, setShowDateConfirmation] = useState(false);
-    const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
-    const [paymentStarted, setPaymentStarted] = useState(false);
 
-    const selectedDay = selectedDate ? parseDate(selectedDate) : null;
-    const isWeekend = selectedDay
-        ? selectedDay.getDay() === 0 || selectedDay.getDay() === 6
-        : false;
 
-    const selectedTicket =
-        ticketOptions.find((ticket) => ticket.id === product.id) ??
-        ticketOptions[0];
+    /*
+    |--------------------------------------------------------------------------
+    | Calendar state
+    |--------------------------------------------------------------------------
+    */
 
-    const normalPrice = selectedTicket
-        ? selectedTicket.allDay
-            ? selectedTicket.weekdayPrice
-            : isWeekend
-              ? selectedTicket.weekendPrice
-              : selectedTicket.weekdayPrice
-        : 0;
-
-    const promotion = useMemo(() => {
-        if (!selectedDate) return null;
-
-        return (
-            promotions.find(
-                (promo) =>
-                    promo.active !== false &&
-                    selectedDate >= promo.startDate &&
-                    selectedDate <= promo.endDate,
-            ) ?? null
+    const initialCalendar = useMemo(() => {
+        const value = new Date(
+            `${selectedDate}T00:00:00`
         );
-    }, [promotions, selectedDate]);
 
-    const discountPerTicket = promotion
-        ? promotion.type === 'percentage'
-            ? Math.round(normalPrice * (promotion.value / 100))
-            : Math.min(normalPrice, promotion.value)
-        : 0;
+        return {
+            year: value.getFullYear(),
+            month: value.getMonth(),
+        };
+    }, [selectedDate]);
 
-    const finalPricePerTicket = Math.max(0, normalPrice - discountPerTicket);
-    const subtotal = normalPrice * quantity;
-    const discountTotal = discountPerTicket * quantity;
-    const total = finalPricePerTicket * quantity;
+    const [calendarYear, setCalendarYear] =
+        useState(initialCalendar.year);
 
-    const canContinue = Boolean(selectedDate && quantity > 0);
+    const [calendarMonth, setCalendarMonth] =
+        useState(initialCalendar.month);
 
-    const updateCustomer = (field: keyof Customer, value: string) => {
-        setCustomer((current) => ({ ...current, [field]: value }));
-    };
 
-    const customerValid =
-        customer.name.trim() &&
-        customer.phone.trim() &&
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email) &&
-        customer.birthDate &&
-        customer.province &&
-        customer.city;
+    /*
+    |--------------------------------------------------------------------------
+    | Update calendar when Laravel selected date changes
+    |--------------------------------------------------------------------------
+    */
 
-    const startCheckout = () => {
-        if (!canContinue) return;
+    useEffect(() => {
+        const selected = new Date(
+            `${selectedDate}T00:00:00`
+        );
+
+        setDate(selectedDate);
+
+        setCalendarYear(
+            selected.getFullYear()
+        );
+
+        setCalendarMonth(
+            selected.getMonth()
+        );
+    }, [selectedDate]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reset voucher ketika tanggal / quantity berubah
+    |--------------------------------------------------------------------------
+    |
+    | Voucher sebelumnya belum tentu masih memenuhi
+    | minimal pembelian setelah quantity berubah.
+    |
+    */
+
+    useEffect(() => {
+        if (!voucherApplied) {
+            return;
+        }
+
+        setVoucherApplied(null);
+        setDiscountAmount(0);
+        setVoucherMessage(
+            'Jumlah tiket berubah. Silakan gunakan kembali voucher.'
+        );
+    }, [quantity, date]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Calendar days
+    |--------------------------------------------------------------------------
+    */
+
+    const calendarDays = useMemo(() => {
+        const firstDay = new Date(
+            calendarYear,
+            calendarMonth,
+            1
+        );
+
+        const lastDay = new Date(
+            calendarYear,
+            calendarMonth + 1,
+            0
+        );
+
+        /*
+         * Sunday = 0
+         * Monday = 1
+         *
+         * Kita ubah menjadi:
+         *
+         * Monday = 0
+         * ...
+         * Sunday = 6
+         */
+
+        const startDay =
+            firstDay.getDay() === 0
+                ? 6
+                : firstDay.getDay() - 1;
+
+        const totalDays =
+            lastDay.getDate();
+
+        const previousMonthLastDay =
+            new Date(
+                calendarYear,
+                calendarMonth,
+                0
+            ).getDate();
+
+        const days: Array<{
+            day: number;
+            currentMonth: boolean;
+            date: string;
+        }> = [];
+
+        /*
+         * Previous month
+         */
+
+        for (
+            let i = startDay - 1;
+            i >= 0;
+            i--
+        ) {
+            const day =
+                previousMonthLastDay - i;
+
+            const previousMonth =
+                calendarMonth === 0
+                    ? 11
+                    : calendarMonth - 1;
+
+            const previousYear =
+                calendarMonth === 0
+                    ? calendarYear - 1
+                    : calendarYear;
+
+            days.push({
+                day,
+                currentMonth: false,
+                date: makeDate(
+                    previousYear,
+                    previousMonth,
+                    day
+                ),
+            });
+        }
+
+
+        /*
+         * Current month
+         */
+
+        for (
+            let day = 1;
+            day <= totalDays;
+            day++
+        ) {
+            days.push({
+                day,
+                currentMonth: true,
+                date: makeDate(
+                    calendarYear,
+                    calendarMonth,
+                    day
+                ),
+            });
+        }
+
+
+        /*
+         * Next month
+         */
+
+        let nextDay = 1;
+
+        while (days.length < 42) {
+            const nextMonth =
+                calendarMonth === 11
+                    ? 0
+                    : calendarMonth + 1;
+
+            const nextYear =
+                calendarMonth === 11
+                    ? calendarYear + 1
+                    : calendarYear;
+
+            days.push({
+                day: nextDay,
+                currentMonth: false,
+                date: makeDate(
+                    nextYear,
+                    nextMonth,
+                    nextDay
+                ),
+            });
+
+            nextDay++;
+        }
+
+        return days;
+    }, [
+        calendarYear,
+        calendarMonth,
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Previous month
+    |--------------------------------------------------------------------------
+    */
+
+    function previousMonth() {
+        if (
+            calendarYear ===
+            new Date().getFullYear() &&
+            calendarMonth ===
+            new Date().getMonth()
+        ) {
+            return;
+        }
+
+        if (calendarMonth === 0) {
+            setCalendarMonth(11);
+            setCalendarYear(
+                (year) => year - 1
+            );
+        } else {
+            setCalendarMonth(
+                (month) => month - 1
+            );
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Next month
+    |--------------------------------------------------------------------------
+    */
+
+    function nextMonth() {
+        if (calendarMonth === 11) {
+            setCalendarMonth(0);
+            setCalendarYear(
+                (year) => year + 1
+            );
+        } else {
+            setCalendarMonth(
+                (month) => month + 1
+            );
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Select date
+    |--------------------------------------------------------------------------
+    */
+
+    function handleDateSelect(
+        selected: string
+    ) {
+        if (selected < minDate) {
+            return;
+        }
+
+        if (selected === date) {
+            return;
+        }
+
+        /*
+         * Voucher dibatalkan karena harga
+         * bisa berubah berdasarkan tanggal.
+         */
+
+        setVoucherApplied(null);
+        setDiscountAmount(0);
+        setVoucherMessage('');
+        setVoucherError('');
+
+        setDate(selected);
+
+        setLoading(true);
+
+        router.get(
+            `/tickets/${product.slug}`,
+            {
+                date: selected,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+
+                onFinish: () => {
+                    setLoading(false);
+                },
+            }
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Quantity
+    |--------------------------------------------------------------------------
+    */
+
+    function decreaseQuantity() {
+        setQuantity((current) =>
+            Math.max(
+                0,
+                current - 1
+            )
+        );
+    }
+
+
+    function increaseQuantity() {
+        setQuantity((current) =>
+            Math.min(
+                20,
+                current + 1
+            )
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Subtotal
+    |--------------------------------------------------------------------------
+    */
+
+    const subtotal =
+        price !== null
+            ? price * quantity
+            : 0;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Total
+    |--------------------------------------------------------------------------
+    */
+
+    const total = Math.max(
+        0,
+        subtotal - discountAmount
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Apply Voucher
+    |--------------------------------------------------------------------------
+    */
+
+    async function handleVoucher() {
+        const code =
+            voucher.trim().toUpperCase();
+
+        setVoucherError('');
+        setVoucherMessage('');
+
+        if (!code) {
+            setVoucherError(
+                'Masukkan kode voucher terlebih dahulu.'
+            );
+
+            return;
+        }
+
+        if (quantity <= 0) {
+            setVoucherError(
+                'Pilih minimal 1 tiket terlebih dahulu.'
+            );
+
+            return;
+        }
+
+        if (!price) {
+            setVoucherError(
+                'Harga tiket belum tersedia.'
+            );
+
+            return;
+        }
+
+        setVoucherLoading(true);
+
+        try {
+            const response =
+                await axios.post(
+                    `/tickets/${product.slug}/voucher`,
+                    {
+                        date,
+                        quantity,
+                        code,
+                    }
+                );
+
+            const data =
+                response.data;
+
+            if (!data.success) {
+                setVoucherApplied(null);
+                setDiscountAmount(0);
+
+                setVoucherError(
+                    data.message ??
+                    'Voucher tidak dapat digunakan.'
+                );
+
+                return;
+            }
+
+            setVoucherApplied(
+                data.voucher
+            );
+
+            setDiscountAmount(
+                Number(
+                    data.discount_amount ?? 0
+                )
+            );
+
+            setVoucherMessage(
+                `Voucher ${data.voucher.code} berhasil digunakan.`
+            );
+
+        } catch (error: any) {
+            setVoucherApplied(null);
+            setDiscountAmount(0);
+
+            const message =
+                error?.response?.data?.message ??
+                'Voucher tidak valid atau tidak dapat digunakan.';
+
+            setVoucherError(message);
+
+        } finally {
+            setVoucherLoading(false);
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remove Voucher
+    |--------------------------------------------------------------------------
+    */
+
+    function removeVoucher() {
+        setVoucherApplied(null);
+        setDiscountAmount(0);
+        setVoucher('');
+        setVoucherMessage('');
+        setVoucherError('');
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Checkout
+    |--------------------------------------------------------------------------
+    */
+
+    function handleCheckout() {
+        if (
+            quantity <= 0 ||
+            price === null ||
+            !agree ||
+            loading
+        ) {
+            return;
+        }
+
         setShowDateConfirmation(true);
-    };
+    }
 
-    const confirmDate = () => {
+    function handleConfirmCheckout() {
         setShowDateConfirmation(false);
-        setStep(2);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
 
-    const continueCustomer = () => {
-        if (!customerValid) return;
-        setShowEmailConfirmation(true);
-    };
+        router.get('/checkout', {
+            product: product.slug,
+            date,
+            quantity,
+            voucher: voucherApplied?.code ?? '',
+        });
+    }
 
-    const confirmCustomer = () => {
-        setShowEmailConfirmation(false);
-        setStep(4);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
 
-    const startPayment = () => {
-        setPaymentStarted(true);
-        setStep(5);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+    /*
+    |--------------------------------------------------------------------------
+    | Render
+    |--------------------------------------------------------------------------
+    */
 
     return (
-        <>
-            <Head title={`${product.name} - Dusun Semilir`} />
+        <PublicLayout
+            settings={settings}
+        >
+            <div className="min-h-screen bg-[#f8f8f8]">
 
-            <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50/60 text-slate-900">
-                <div className="pointer-events-none fixed inset-0 overflow-hidden">
-                    <div className="absolute -left-32 top-20 h-80 w-80 rounded-full bg-emerald-300/20 blur-3xl" />
-                    <div className="absolute -right-32 top-72 h-96 w-96 rounded-full bg-lime-300/20 blur-3xl" />
-                </div>
+                <div className="mx-auto max-w-[1800px] px-6 pb-10 pt-28">
 
-                <header className="relative z-10 mx-auto max-w-7xl px-4 pt-5 sm:px-6">
-                    <div className="flex items-center justify-between rounded-2xl bg-white/90 px-5 py-4 shadow-sm ring-1 ring-slate-200/70 backdrop-blur">
-                        <div className="flex items-center gap-3">
-                            <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-700 text-xl text-white shadow-lg shadow-emerald-700/20">
-                                🌿
-                            </div>
-                            <div>
-                                <div className="text-base font-black tracking-tight text-emerald-800">
-                                    DUSUN SEMILIR
+                    <div className="grid grid-cols-1 gap-12 lg:grid-cols-[0.72fr_1.45fr]">
+
+                        {/* =================================================
+                            LEFT
+                        ================================================= */}
+
+                        <div className="rounded-[30px] border border-gray-200 bg-white px-8 py-8 shadow-[0_2px_6px_rgba(0,0,0,0.10)]">
+
+                            <h1 className="text-center text-[26px] font-bold text-[#171717]">
+                                Tanggal Kedatangan
+                            </h1>
+
+
+                            {/* Calendar Header */}
+
+                            <div className="mt-12 flex items-center justify-between">
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        previousMonth
+                                    }
+                                    className="flex h-9 w-9 items-center justify-center rounded-full text-gray-300 transition hover:bg-gray-50 hover:text-gray-600"
+                                >
+                                    <span className="text-3xl leading-none">
+                                        ‹
+                                    </span>
+                                </button>
+
+
+                                <div className="text-[20px] font-medium text-gray-800">
+                                    {
+                                        MONTH_NAMES[
+                                        calendarMonth
+                                        ]
+                                    }
                                 </div>
-                                <div className="text-[9px] font-bold tracking-[0.3em] text-slate-400">
-                                    TIKET ONLINE
-                                </div>
-                            </div>
-                        </div>
-                        <div className="hidden rounded-full bg-orange-500 px-5 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 sm:block">
-                            Beli Tiket
-                        </div>
-                    </div>
-                </header>
 
-                <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
-                    <StepHeader step={step} />
 
-                    {step === 1 && (
-                        <>
-                            <div className="mb-7 text-center">
-                                <span className="inline-flex rounded-full bg-emerald-100 px-4 py-2 text-xs font-extrabold text-emerald-700">
-                                    {product.category ?? 'Tiket'}
-                                </span>
-                                <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-                                    {product.name}
-                                </h1>
-                                <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                                    Pilih tanggal kedatangan dan jumlah tiket. Harga serta
-                                    promo akan menyesuaikan tanggal yang dipilih.
-                                </p>
-                            </div>
+                                <button
+                                    type="button"
+                                    onClick={
+                                        nextMonth
+                                    }
+                                    className="flex h-9 w-9 items-center justify-center rounded-full text-gray-300 transition hover:bg-gray-50 hover:text-gray-600"
+                                >
+                                    <span className="text-3xl leading-none">
+                                        ›
+                                    </span>
+                                </button>
 
-                            <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
-                                <section className="rounded-[28px] bg-white p-5 shadow-xl shadow-slate-900/5 ring-1 ring-slate-200/70 sm:p-7">
-                                    <div className="mb-6 flex items-center justify-between">
-                                        <div>
-                                            <h2 className="text-xl font-black">
-                                                Tanggal Kedatangan
-                                            </h2>
-                                            <p className="mt-1 text-xs text-slate-400">
-                                                Pilih tanggal kunjungan
-                                            </p>
-                                        </div>
-                                        {selectedDate && (
-                                            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
-                                                Dipilih
-                                            </span>
-                                        )}
-                                    </div>
 
-                                    <Calendar
-                                        value={selectedDate}
-                                        onChange={setSelectedDate}
-                                    />
-                                </section>
-
-                                <section className="rounded-[28px] bg-white p-5 shadow-xl shadow-slate-900/5 ring-1 ring-slate-200/70 sm:p-7">
-                                    <h2 className="text-center text-xl font-black">
-                                        Pilihan Tiket
-                                    </h2>
-
-                                    {selectedDate && (
-                                        <div className="mx-auto mt-3 max-w-md rounded-2xl bg-emerald-50 px-4 py-3 text-center">
-                                            <div className="text-[11px] font-bold uppercase tracking-wide text-emerald-600">
-                                                Tanggal kunjungan
-                                            </div>
-                                            <div className="mt-1 text-sm font-black text-emerald-900">
-                                                {formatLongDate(selectedDay!)}
-                                            </div>
-                                        </div>
+                                <select
+                                    value={
+                                        calendarYear
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        setCalendarYear(
+                                            Number(
+                                                event
+                                                    .target
+                                                    .value
+                                            )
+                                        )
+                                    }
+                                    className="ml-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 outline-none"
+                                >
+                                    {Array.from(
+                                        {
+                                            length: 6,
+                                        },
+                                        (
+                                            _,
+                                            index
+                                        ) =>
+                                            new Date().getFullYear() +
+                                            index
+                                    ).map(
+                                        (
+                                            year
+                                        ) => (
+                                            <option
+                                                key={
+                                                    year
+                                                }
+                                                value={
+                                                    year
+                                                }
+                                            >
+                                                {
+                                                    year
+                                                }
+                                            </option>
+                                        )
                                     )}
+                                </select>
 
-                                    <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                                            <div>
-                                                <h3 className="text-lg font-black">
-                                                    {selectedTicket?.name ?? product.name}
-                                                </h3>
-                                                <p className="mt-1 text-xs text-slate-500">
-                                                    {selectedDate
-                                                        ? isWeekend
-                                                            ? 'Harga Weekend'
-                                                            : 'Harga Weekday'
-                                                        : 'Pilih tanggal untuk melihat harga'}
-                                                </p>
-
-                                                <div className="mt-3 flex flex-wrap items-end gap-2">
-                                                    <span className="text-sm text-slate-400 line-through">
-                                                        {selectedDate ? rupiah(normalPrice) : '—'}
-                                                    </span>
-                                                    <span className="text-xl font-black text-emerald-700">
-                                                        {selectedDate
-                                                            ? rupiah(finalPricePerTicket)
-                                                            : 'Pilih tanggal'}
-                                                    </span>
-                                                    {promotion && (
-                                                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-black text-orange-600">
-                                                            {promotion.type === 'percentage'
-                                                                ? `PROMO ${promotion.value}%`
-                                                                : `HEMAT ${rupiah(promotion.value)}`}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-4 self-end sm:self-auto">
-                                                <button
-                                                    type="button"
-                                                    disabled={quantity === 0}
-                                                    onClick={() =>
-                                                        setQuantity((value) =>
-                                                            Math.max(0, value - 1),
-                                                        )
-                                                    }
-                                                    className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-xl font-black text-slate-600 transition hover:bg-slate-200 disabled:opacity-40"
-                                                >
-                                                    −
-                                                </button>
-                                                <span className="w-5 text-center text-xl font-black">
-                                                    {quantity}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    disabled={!selectedDate}
-                                                    onClick={() =>
-                                                        setQuantity((value) =>
-                                                            Math.min(20, value + 1),
-                                                        )
-                                                    }
-                                                    className="grid h-11 w-11 place-items-center rounded-full bg-emerald-600 text-xl font-black text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-40"
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="mx-auto mt-6 max-w-2xl rounded-2xl bg-slate-50 p-5">
-                                        <div className="space-y-3 text-sm">
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-500">Harga tiket</span>
-                                                <span className="font-bold">
-                                                    {rupiah(normalPrice)} × {quantity}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-500">
-                                                    Diskon{promotion ? ` (${promotion.value}%)` : ''}
-                                                </span>
-                                                <span className="font-bold text-orange-600">
-                                                    - {rupiah(discountTotal)}
-                                                </span>
-                                            </div>
-                                            <div className="border-t border-slate-200 pt-3">
-                                                <div className="flex items-end justify-between">
-                                                    <span className="font-black">Total</span>
-                                                    <span className="text-2xl font-black text-emerald-700">
-                                                        {rupiah(total)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="mx-auto mt-6 max-w-2xl">
-                                        <button
-                                            type="button"
-                                            disabled={!canContinue}
-                                            onClick={startCheckout}
-                                            className="w-full rounded-2xl bg-orange-500 px-6 py-4 text-sm font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-                                        >
-                                            CHECKOUT
-                                        </button>
-                                    </div>
-
-                                    <p className="mt-5 text-center text-xs text-slate-400">
-                                        Sudah melakukan reservasi?{' '}
-                                        <button
-                                            type="button"
-                                            className="font-bold text-emerald-700 hover:underline"
-                                        >
-                                            Cek status reservasi
-                                        </button>
-                                    </p>
-                                </section>
-                            </div>
-                        </>
-                    )}
-
-                    {step === 2 && (
-                        <section className="mx-auto max-w-2xl">
-                            <div className="mb-7 text-center">
-                                <h1 className="text-3xl font-black">Data Diri Pemesan</h1>
-                                <p className="mt-2 text-sm text-slate-500">
-                                    Isi data dengan benar. Kode booking dan e-ticket akan
-                                    dikirim ke email Anda.
-                                </p>
                             </div>
 
-                            <div className="rounded-[28px] bg-white p-6 shadow-xl shadow-slate-900/5 ring-1 ring-slate-200/70 sm:p-8">
-                                <div className="space-y-5">
-                                    {[
-                                        ['name', 'Nama', 'Contoh: Budi Santoso', 'text'],
-                                        ['phone', 'Nomor Telepon', '08123456789', 'tel'],
-                                        ['email', 'Email', 'nama@email.com', 'email'],
-                                        ['birthDate', 'Tanggal Lahir', '', 'date'],
-                                    ].map(([field, label, placeholder, type]) => (
-                                        <label key={field} className="block">
-                                            <span className="mb-2 block text-sm font-bold text-slate-700">
-                                                {label}
-                                            </span>
-                                            <input
-                                                type={type}
-                                                value={customer[field as keyof Customer]}
-                                                onChange={(event) =>
-                                                    updateCustomer(
-                                                        field as keyof Customer,
-                                                        event.target.value,
+
+                            {/* Weekday */}
+
+                            <div className="mt-6 grid grid-cols-7 text-center">
+
+                                {[
+                                    'Min',
+                                    'Sen',
+                                    'Sel',
+                                    'Rab',
+                                    'Kam',
+                                    'Jum',
+                                    'Sab',
+                                ].map(
+                                    (
+                                        day
+                                    ) => (
+                                        <div
+                                            key={
+                                                day
+                                            }
+                                            className="py-2 text-[13px] font-medium text-[#a3acc0]"
+                                        >
+                                            {
+                                                day
+                                            }
+                                        </div>
+                                    )
+                                )}
+
+                            </div>
+
+
+                            {/* Days */}
+
+                            <div className="grid grid-cols-7 gap-y-2 text-center">
+
+                                {calendarDays.map(
+                                    (
+                                        item,
+                                        index
+                                    ) => {
+                                        const isSelected =
+                                            item.date ===
+                                            date;
+
+                                        const isDisabled =
+                                            item.date <
+                                            minDate;
+
+                                        return (
+                                            <button
+                                                key={`${item.date}-${index}`}
+                                                type="button"
+                                                disabled={
+                                                    isDisabled
+                                                }
+                                                onClick={() =>
+                                                    handleDateSelect(
+                                                        item.date
                                                     )
                                                 }
-                                                placeholder={placeholder}
-                                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-                                            />
-                                        </label>
-                                    ))}
+                                                className={`
+                                                    mx-auto
+                                                    flex
+                                                    h-10
+                                                    w-10
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    text-[14px]
+                                                    transition
 
-                                    <label className="block">
-                                        <span className="mb-2 block text-sm font-bold text-slate-700">
-                                            Provinsi
-                                        </span>
-                                        <select
-                                            value={customer.province}
-                                            onChange={(event) =>
-                                                updateCustomer('province', event.target.value)
-                                            }
-                                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-                                        >
-                                            <option value="">Pilih Provinsi</option>
-                                            <option>Jawa Tengah</option>
-                                            <option>Jawa Barat</option>
-                                            <option>DKI Jakarta</option>
-                                            <option>Jawa Timur</option>
-                                            <option>DI Yogyakarta</option>
-                                            <option>Sumatera Utara</option>
-                                            <option>Sumatera Barat</option>
-                                            <option>Bali</option>
-                                        </select>
-                                    </label>
+                                                    ${isSelected
+                                                        ? 'bg-[#13a77d] font-bold text-white shadow-md'
+                                                        : item.currentMonth
+                                                            ? isDisabled
+                                                                ? 'cursor-not-allowed text-gray-200'
+                                                                : 'text-gray-800 hover:bg-emerald-50 hover:text-emerald-700'
+                                                            : 'text-gray-300'
+                                                    }
+                                                `}
+                                            >
+                                                {
+                                                    item.day
+                                                }
+                                            </button>
+                                        );
+                                    }
+                                )}
 
-                                    <label className="block">
-                                        <span className="mb-2 block text-sm font-bold text-slate-700">
-                                            Kota/Kabupaten
-                                        </span>
-                                        <select
-                                            value={customer.city}
-                                            onChange={(event) =>
-                                                updateCustomer('city', event.target.value)
-                                            }
-                                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-                                        >
-                                            <option value="">Pilih Kota/Kabupaten</option>
-                                            <option>Semarang</option>
-                                            <option>Kendal</option>
-                                            <option>Demak</option>
-                                            <option>Ungaran</option>
-                                            <option>Magelang</option>
-                                            <option>Surakarta</option>
-                                        </select>
-                                    </label>
-                                </div>
-
-                                <div className="mt-7 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setStep(1)}
-                                        className="flex-1 rounded-xl border border-slate-200 px-5 py-3.5 text-sm font-black text-slate-600 hover:bg-slate-50"
-                                    >
-                                        KEMBALI
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled={!customerValid}
-                                        onClick={continueCustomer}
-                                        className="flex-1 rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-600/20 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-                                    >
-                                        SELANJUTNYA
-                                    </button>
-                                </div>
                             </div>
-                        </section>
-                    )}
 
-                    {step === 4 && (
-                        <section className="mx-auto max-w-lg">
-                            <div className="mb-7 text-center">
-                                <h1 className="text-3xl font-black">Ringkasan Pesanan</h1>
-                                <p className="mt-2 text-sm text-slate-500">
-                                    Periksa kembali semua data sebelum melakukan pembayaran.
+
+                            {/* Selected Date */}
+
+                            <div className="mt-8 border-t border-gray-100 pt-6">
+
+                                <p className="text-xs uppercase tracking-wide text-gray-400">
+                                    Tanggal dipilih
                                 </p>
+
+                                <p className="mt-1 text-base font-bold text-gray-800">
+                                    {
+                                        formatLongDate(
+                                            date
+                                        )
+                                    }
+                                </p>
+
+                                {dayType && (
+                                    <p className="mt-1 text-sm text-[#13a77d]">
+                                        Tarif{' '}
+                                        <strong>
+                                            {
+                                                DAY_TYPE_LABEL[
+                                                dayType
+                                                ] ??
+                                                dayType
+                                            }
+                                        </strong>
+                                    </p>
+                                )}
+
                             </div>
 
-                            <div className="overflow-hidden rounded-[28px] bg-white shadow-xl shadow-slate-900/5 ring-1 ring-slate-200/70">
-                                <div className="bg-emerald-700 p-6 text-white">
-                                    <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-200">
-                                        Dusun Semilir
-                                    </div>
-                                    <div className="mt-2 text-xl font-black">
-                                        Ringkasan Pesanan
-                                    </div>
-                                    <div className="mt-1 text-sm text-emerald-100">
-                                        {selectedDate && formatLongDate(selectedDay!)}
-                                    </div>
-                                </div>
+                        </div>
 
-                                <div className="space-y-5 p-6">
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <div className="text-xs text-slate-400">Nama</div>
-                                            <div className="mt-1 font-bold">{customer.name}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-xs text-slate-400">Telepon</div>
-                                            <div className="mt-1 font-bold">{customer.phone}</div>
-                                        </div>
-                                        <div className="col-span-2">
-                                            <div className="text-xs text-slate-400">Email</div>
-                                            <div className="mt-1 font-bold break-all">
-                                                {customer.email}
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="border-y border-dashed border-slate-200 py-5">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <div className="font-black">
-                                                    {selectedTicket?.name ?? product.name}
-                                                </div>
-                                                <div className="mt-1 text-xs text-slate-400">
-                                                    {quantity} tiket ·{' '}
-                                                    {isWeekend ? 'Weekend' : 'Weekday'}
-                                                </div>
-                                            </div>
-                                            <div className="text-right font-black">
-                                                {rupiah(total)}
-                                            </div>
-                                        </div>
+                        {/* =================================================
+                            RIGHT
+                        ================================================= */}
 
-                                        {promotion && (
-                                            <div className="mt-3 flex justify-between text-sm text-orange-600">
-                                                <span>{promotion.name}</span>
-                                                <span>- {rupiah(discountTotal)}</span>
-                                            </div>
-                                        )}
+                        <div className="rounded-[30px] border border-gray-200 bg-white px-10 py-8 shadow-[0_2px_6px_rgba(0,0,0,0.10)]">
+
+                            <h2 className="text-center text-[28px] font-bold text-[#171717]">
+                                Ticket Types
+                            </h2>
+
+
+                            {/* Ticket */}
+
+                            <div className="mx-auto mt-16 max-w-[760px] rounded-[12px] border border-gray-100 bg-white px-7 py-6 shadow-[0_2px_5px_rgba(0,0,0,0.15)]">
+
+                                <div className="flex items-center justify-between gap-5">
+
+                                    {/* Name */}
+
+                                    <div className="min-w-0 flex-1">
+
+                                        <h3 className="text-[20px] font-bold text-gray-900">
+                                            {
+                                                product.name
+                                            }
+                                        </h3>
+
+                                        <p className="mt-1 text-[13px] text-gray-700">
+                                            {
+                                                dayType
+                                                    ? `Promo ${DAY_TYPE_LABEL[
+                                                    dayType
+                                                    ] ??
+                                                    dayType
+                                                    }`
+                                                    : 'Harga tiket'
+                                            }
+                                        </p>
+
                                     </div>
 
-                                    <div className="flex items-end justify-between">
-                                        <span className="font-black">TOTAL</span>
-                                        <span className="text-2xl font-black text-emerald-700">
-                                            {rupiah(total)}
+
+                                    {/* Quantity */}
+
+                                    <div className="flex items-center gap-5">
+
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                decreaseQuantity
+                                            }
+                                            disabled={
+                                                quantity <=
+                                                0
+                                            }
+                                            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#159f79] text-xl font-bold leading-none text-white shadow-md transition hover:bg-[#108b69] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            −
+                                        </button>
+
+
+                                        <span className="w-4 text-center text-[22px] font-bold text-gray-900">
+                                            {
+                                                quantity
+                                            }
                                         </span>
+
+
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                increaseQuantity
+                                            }
+                                            disabled={
+                                                quantity >=
+                                                20
+                                            }
+                                            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#159f79] text-xl font-bold leading-none text-white shadow-md transition hover:bg-[#108b69] disabled:opacity-50"
+                                        >
+                                            +
+                                        </button>
+
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={startPayment}
-                                        className="w-full rounded-2xl bg-orange-500 px-5 py-4 text-sm font-black text-white shadow-xl shadow-orange-500/20 hover:bg-orange-600"
-                                    >
-                                        BAYAR SEKARANG
-                                    </button>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => setStep(2)}
-                                        className="w-full rounded-xl px-5 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50"
-                                    >
-                                        Kembali ke data pemesan
-                                    </button>
+                                    {/* Price */}
+
+                                    <div className="w-[150px] text-right">
+
+                                        <span className="text-[16px] font-medium text-gray-900">
+                                            {price !==
+                                                null
+                                                ? formatRupiah(
+                                                    price
+                                                )
+                                                : 'Rp. 0'}
+                                        </span>
+
+                                    </div>
+
                                 </div>
-                            </div>
-                        </section>
-                    )}
 
-                    {step === 5 && (
-                        <section className="mx-auto max-w-xl">
-                            <div className="mb-7 text-center">
-                                <span className="inline-flex rounded-full bg-orange-100 px-4 py-2 text-xs font-black text-orange-600">
-                                    MENUNGGU PEMBAYARAN
+                            </div>
+
+
+                            {/* Loading */}
+
+                            {loading && (
+                                <div className="mx-auto mt-3 max-w-[760px] text-center text-xs text-gray-400">
+                                    Menghitung harga...
+                                </div>
+                            )}
+
+
+                            {/* Price Error */}
+
+                            {priceError && (
+                                <div className="mx-auto mt-4 max-w-[760px] rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                                    {
+                                        priceError
+                                    }
+                                </div>
+                            )}
+
+
+                            {/* =================================================
+                                VOUCHER
+                            ================================================= */}
+
+                            <div className="mx-auto mt-6 max-w-[760px]">
+
+                                {!voucherApplied ? (
+                                    <div className="flex gap-2">
+
+                                        <input
+                                            type="text"
+                                            value={
+                                                voucher
+                                            }
+                                            onChange={(
+                                                event
+                                            ) => {
+                                                setVoucher(
+                                                    event
+                                                        .target
+                                                        .value
+                                                        .toUpperCase()
+                                                );
+
+                                                setVoucherError(
+                                                    ''
+                                                );
+
+                                                setVoucherMessage(
+                                                    ''
+                                                );
+                                            }}
+                                            onKeyDown={(
+                                                event
+                                            ) => {
+                                                if (
+                                                    event.key ===
+                                                    'Enter'
+                                                ) {
+                                                    handleVoucher();
+                                                }
+                                            }}
+                                            placeholder="Kode voucher"
+                                            className="h-10 flex-1 rounded-lg border border-gray-200 px-4 text-sm uppercase outline-none transition focus:border-[#159f79] focus:ring-1 focus:ring-[#159f79]"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                handleVoucher
+                                            }
+                                            disabled={
+                                                voucherLoading ||
+                                                quantity <=
+                                                0 ||
+                                                price ===
+                                                null
+                                            }
+                                            className="rounded-lg bg-[#159f79] px-5 text-sm font-semibold text-white transition hover:bg-[#108b69] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {voucherLoading
+                                                ? '...'
+                                                : 'Gunakan'}
+                                        </button>
+
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+
+                                        <div>
+                                            <p className="text-sm font-bold text-emerald-800">
+                                                {
+                                                    voucherApplied.code
+                                                }
+                                            </p>
+
+                                            <p className="text-xs text-emerald-600">
+                                                {
+                                                    voucherApplied.name
+                                                }
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                removeVoucher
+                                            }
+                                            className="text-xs font-semibold text-red-500 hover:text-red-700"
+                                        >
+                                            Hapus
+                                        </button>
+
+                                    </div>
+                                )}
+
+
+                                {voucherError && (
+                                    <p className="mt-2 text-xs text-red-500">
+                                        {
+                                            voucherError
+                                        }
+                                    </p>
+                                )}
+
+
+                                {voucherMessage &&
+                                    !voucherError && (
+                                        <p className="mt-2 text-xs text-emerald-600">
+                                            {
+                                                voucherMessage
+                                            }
+                                        </p>
+                                    )}
+
+                            </div>
+
+
+                            {/* =================================================
+                                TERM & CONDITION
+                            ================================================= */}
+
+                            <div className="mx-auto mt-6 max-w-[760px]">
+
+                                <label className="flex cursor-pointer items-center gap-3 text-[14px] text-[#315fa9]">
+
+                                    <input
+                                        type="checkbox"
+                                        checked={
+                                            agree
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            setAgree(
+                                                event
+                                                    .target
+                                                    .checked
+                                            )
+                                        }
+                                        className="h-[19px] w-[19px] accent-[#159f79]"
+                                    />
+
+                                    <span>
+                                        I agree with Term
+                                        And Condition and
+                                        Privacy Policy of
+                                        Saloka Theme Park
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+
+                            {/* =================================================
+                                TOTAL
+                            ================================================= */}
+
+                            <div className="mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-8">
+
+                                <div className="text-left">
+
+                                    <p className="text-[13px] font-medium text-gray-700">
+                                        arrival date:
+                                    </p>
+
+                                    <p className="mt-1 text-[18px] font-bold text-gray-900">
+                                        {
+                                            formatLongDate(
+                                                date
+                                            )
+                                        }
+                                    </p>
+
+                                </div>
+
+
+                                <div className="flex items-center overflow-hidden rounded-full bg-white shadow-[0_2px_12px_rgba(0,0,0,0.18)]">
+
+                                    <div className="px-5 py-3 text-[15px] font-medium text-gray-900">
+
+                                        <div>
+                                            Rp.{' '}
+                                            {
+                                                formatNumber(
+                                                    total
+                                                )
+                                            }
+                                        </div>
+
+                                    </div>
+
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleCheckout
+                                        }
+                                        disabled={
+                                            quantity <=
+                                            0 ||
+                                            price ===
+                                            null ||
+                                            !agree ||
+                                            loading
+                                        }
+                                        className={`
+                                            h-[52px]
+                                            min-w-[130px]
+                                            rounded-full
+                                            px-6
+                                            text-[16px]
+                                            font-bold
+                                            transition
+
+                                            ${quantity >
+                                                0 &&
+                                                price !==
+                                                null &&
+                                                agree &&
+                                                !loading
+                                                ? 'bg-[#159f79] text-white hover:bg-[#108b69]'
+                                                : 'bg-[#dedede] text-[#a8a8a8]'
+                                            }
+                                        `}
+                                    >
+                                        CHECKOUT
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+
+                            {/* =================================================
+                                Reservation
+                            ================================================= */}
+
+                            <div className="mt-8 text-center text-[13px] text-gray-700">
+
+                                <span>
+                                    *telah melakukan
+                                    reservasi? cek status
+                                    reservasi{' '}
                                 </span>
-                                <h1 className="mt-4 text-3xl font-black">Pembayaran QRIS</h1>
-                                <p className="mt-2 text-sm text-slate-500">
-                                    Scan QRIS menggunakan mobile banking atau e-wallet Anda.
-                                </p>
+
+                                <a
+                                    href="/reservation"
+                                    className="font-medium text-[#315fa9] underline"
+                                >
+                                    di sini
+                                </a>
+
                             </div>
 
-                            <div className="rounded-[28px] bg-white p-6 text-center shadow-xl shadow-slate-900/5 ring-1 ring-slate-200/70 sm:p-8">
-                                <div className="mx-auto max-w-sm rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                                    <div className="mb-4 text-sm font-bold text-slate-600">
-                                        Total Pembayaran
-                                    </div>
-                                    <div className="text-3xl font-black text-emerald-700">
-                                        {rupiah(total)}
-                                    </div>
+                        </div>
 
-                                    <div className="mx-auto my-6 grid aspect-square max-w-[270px] place-items-center rounded-2xl bg-white p-5 shadow-sm">
-                                        {/* Ganti placeholder ini dengan URL QRIS dari backend/Espay */}
-                                        <div className="grid aspect-square w-full place-items-center border-8 border-slate-900 bg-white p-4">
-                                            <div className="text-center">
-                                                <div className="text-5xl">▦</div>
-                                                <div className="mt-2 text-xs font-black tracking-widest">
-                                                    QRIS
-                                                </div>
-                                                <div className="mt-1 text-[9px] text-slate-400">
-                                                    MENUNGGU QR DARI ESPAY
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                    </div>
 
-                                    <div className="rounded-xl bg-emerald-50 p-4 text-left text-xs leading-5 text-emerald-800">
-                                        <div className="font-black">Cara pembayaran</div>
-                                        <ol className="mt-2 list-decimal pl-4">
-                                            <li>Buka mobile banking atau e-wallet.</li>
-                                            <li>Pilih menu Scan QR / QRIS.</li>
-                                            <li>Scan QR di atas.</li>
-                                            <li>Pastikan nominal pembayaran benar.</li>
-                                        </ol>
-                                    </div>
-                                </div>
+                </div>
 
-                                <div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm text-orange-800">
-                                    <div className="font-black">Status</div>
-                                    <div className="mt-1">
-                                        {paymentStarted
-                                            ? 'Menunggu konfirmasi pembayaran dari Espay...'
-                                            : 'Menyiapkan pembayaran...'}
-                                    </div>
-                                </div>
-
-                                <div className="mt-6 text-xs text-slate-400">
-                                    Setelah pembayaran berhasil, e-ticket akan dibuat secara
-                                    otomatis.
-                                </div>
-                            </div>
-                        </section>
-                    )}
-                </main>
-
-                <footer className="relative z-10 border-t border-emerald-100 bg-white/70 py-8 text-center text-xs text-slate-400">
-                    © {new Date().getFullYear()} Dusun Semilir · Tiket Online
-                </footer>
             </div>
 
-            {showDateConfirmation && selectedDate && (
-                <Modal>
-                    <div className="text-center">
-                        <div className="mx-auto grid h-36 w-36 place-items-center rounded-full bg-emerald-50 text-7xl">
-                            🐊
-                        </div>
-                        <div className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
-                            Konfirmasi
-                        </div>
-                        <h2 className="mt-2 text-2xl font-black">
-                            Tanggal Kedatangan
-                        </h2>
-                        <div className="mt-2 text-lg font-black">
-                            {formatLongDate(selectedDay!)}
-                        </div>
-                        <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-slate-500">
-                            Silakan pastikan tanggal sudah benar sebelum melanjutkan
-                            pengisian data pemesan.
-                        </p>
 
-                        <div className="mt-7 flex justify-center gap-3">
+
+
+
+
+
+
+            {/* =========================
+            POPUP KONFIRMASI TANGGAL
+            ========================= */}
+            {showDateConfirmation && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
+                    <div className="w-full max-w-[585px] rounded-2xl bg-white px-6 py-8 shadow-2xl sm:px-10">
+
+                        <div className="mb-5 flex justify-center">
+                            <img
+                                src="/images/osil.png"
+                                alt="OSIL"
+                                className="h-[230px] w-auto object-contain"
+                            />
+                        </div>
+
+                        <div className="text-center">
+
+                            <h2 className="text-[18px] font-bold text-gray-700">
+                                Konfirmasi Tanggal Kedatangan
+                            </h2>
+
+                            <p className="mt-1 text-[17px] font-bold italic text-gray-800">
+                                {formatLongDate(date)}
+                            </p>
+
+                            <p className="mt-4 text-[14px] leading-6 text-gray-700">
+                                Silakan pastikan tanggal sudah benar sebelum
+                                melanjutkan pengisian data pemesan.
+                            </p>
+
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-center gap-8">
+
                             <button
                                 type="button"
-                                onClick={() => setShowDateConfirmation(false)}
-                                className="rounded-xl px-6 py-3 text-sm font-black text-orange-500 hover:bg-orange-50"
+                                onClick={() =>
+                                    setShowDateConfirmation(false)
+                                }
+                                className="font-bold text-[#f5c400] transition hover:opacity-70"
                             >
                                 CANCEL
                             </button>
+
                             <button
                                 type="button"
-                                onClick={confirmDate}
-                                className="rounded-xl bg-emerald-600 px-7 py-3 text-sm font-black text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700"
+                                onClick={handleConfirmCheckout}
+                                className="rounded-full bg-[#159f79] px-5 py-2 text-sm font-bold text-white shadow-md transition hover:bg-[#128765]"
                             >
                                 NEXT
                             </button>
+
                         </div>
+
                     </div>
-                </Modal>
+                </div>
             )}
 
-            {showEmailConfirmation && (
-                <Modal>
-                    <div>
-                        <div className="pr-8 text-xl font-black">
-                            Apakah alamat email {customer.email} sudah benar?
-                        </div>
-                        <p className="mt-4 text-sm leading-6 text-slate-500">
-                            Kode booking akan dikirim via email. Kesalahan penulisan
-                            alamat dapat menyebabkan Anda tidak menerima kode booking
-                            dari kami.
-                        </p>
 
-                        <div className="mt-7 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setShowEmailConfirmation(false)}
-                                className="rounded-xl px-5 py-3 text-sm font-black text-emerald-600 hover:bg-emerald-50"
-                            >
-                                CANCEL
-                            </button>
-                            <button
-                                type="button"
-                                onClick={confirmCustomer}
-                                className="rounded-xl px-5 py-3 text-sm font-black text-emerald-600 hover:bg-emerald-50"
-                            >
-                                NEXT
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
-        </>
+
+
+        </PublicLayout>
     );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Make date
+|--------------------------------------------------------------------------
+*/
+
+function makeDate(
+    year: number,
+    month: number,
+    day: number
+): string {
+    const date = new Date(
+        year,
+        month,
+        day
+    );
+
+    const y =
+        date.getFullYear();
+
+    const m = String(
+        date.getMonth() + 1
+    ).padStart(2, '0');
+
+    const d = String(
+        date.getDate()
+    ).padStart(2, '0');
+
+    return `${y}-${m}-${d}`;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Format long date
+|--------------------------------------------------------------------------
+*/
+
+function formatLongDate(
+    date: string
+): string {
+    if (!date) {
+        return '-';
+    }
+
+    return new Intl.DateTimeFormat(
+        'id-ID',
+        {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        }
+    ).format(
+        new Date(`${date}T00:00:00`)
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Format number
+|--------------------------------------------------------------------------
+*/
+
+function formatNumber(
+    value: number
+): string {
+    return new Intl.NumberFormat(
+        'id-ID'
+    ).format(value);
 }

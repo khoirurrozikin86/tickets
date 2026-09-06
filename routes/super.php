@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\{
     OrderController,
     paymentController,
     SiteSettingController,
+    bannerController,
 };
 
 Route::middleware(['auth'])
@@ -359,5 +360,40 @@ Route::middleware(['auth'])
                 Route::put('/', [SiteSettingController::class, 'update'])
                     ->middleware('permission:site-settings.update')
                     ->name('update');
+            });
+
+
+
+
+
+
+
+
+
+
+
+        Route::prefix('banners')
+            ->name('banners.')
+            ->group(function () {
+
+                Route::get('/', [BannerController::class, 'index'])
+                    ->middleware('permission:banners.view')
+                    ->name('index');
+
+                Route::get('/dt', [BannerController::class, 'dt'])
+                    ->middleware('permission:banners.view')
+                    ->name('dt');
+
+                Route::post('/', [BannerController::class, 'store'])
+                    ->middleware('permission:banners.create')
+                    ->name('store');
+
+                Route::put('/{banner}', [BannerController::class, 'update'])
+                    ->middleware('permission:banners.update')
+                    ->name('update');
+
+                Route::delete('/{banner}', [BannerController::class, 'destroy'])
+                    ->middleware('permission:banners.delete')
+                    ->name('destroy');
             });
     });

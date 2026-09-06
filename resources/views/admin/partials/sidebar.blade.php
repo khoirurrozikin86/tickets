@@ -397,6 +397,9 @@
 
 
 
+
+
+
             @can('site-settings.view')
                 <li class="nav-item nav-category">
                     WEBSITE
@@ -433,6 +436,39 @@
                     </div>
                 </li>
             @endcan
+
+
+
+
+            @can('banners.view')
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-banners" role="button"
+                        aria-expanded="{{ request()->routeIs('super.banners.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-banners">
+
+                        <i class="link-icon" data-feather="image"></i>
+
+                        <span class="link-title">Banner</span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.banners.*') ? 'show' : '' }}" id="menu-banners">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+                                <a href="{{ route('super.banners.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.banners.index') ? 'active' : '' }}">
+                                    Show
+                                </a>
+                            </li>
+
+                        </ul>
+                    </div>
+                </li>
+            @endcan
+
 
 
 

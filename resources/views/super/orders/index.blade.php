@@ -217,8 +217,8 @@
 @push('styles')
     <style>
         /*
-                                     * ORDER NUMBER
-                                     */
+                                                     * ORDER NUMBER
+                                                     */
         .order-number {
             font-weight: 600;
             color: #3949ab;
@@ -226,8 +226,8 @@
 
 
         /*
-                                     * CUSTOMER
-                                     */
+                                                     * CUSTOMER
+                                                     */
         .order-customer-name {
             font-weight: 500;
         }
@@ -240,8 +240,8 @@
 
 
         /*
-                                     * ITEMS
-                                     */
+                                                     * ITEMS
+                                                     */
         .order-items {
             line-height: 1.5;
         }
@@ -271,8 +271,8 @@
 
 
         /*
-                                     * TOTAL
-                                     */
+                                                     * TOTAL
+                                                     */
         .order-total {
             font-weight: 600;
             white-space: nowrap;
@@ -280,8 +280,8 @@
 
 
         /*
-                                     * STATUS
-                                     */
+                                                     * STATUS
+                                                     */
         .order-status {
             font-size: 11px;
             font-weight: 600;
@@ -292,8 +292,8 @@
 
 
         /*
-                                     * PAYMENT STATUS
-                                     */
+                                                     * PAYMENT STATUS
+                                                     */
         .order-payment-status {
             font-size: 11px;
             font-weight: 600;
@@ -304,8 +304,8 @@
 
 
         /*
-                                     * ACTION ICON
-                                     */
+                                                     * ACTION ICON
+                                                     */
         .order-action {
             display: inline-flex;
             align-items: center;
@@ -336,8 +336,8 @@
 
 
         /*
-                                     * DATE
-                                     */
+                                                     * DATE
+                                                     */
         .order-date {
             white-space: nowrap;
             font-size: 12px;
@@ -449,20 +449,7 @@
                     {
                         data: 'total_amount',
                         name: 'total_amount',
-
-                        className: 'text-end',
-
-                        render: function(data) {
-
-                            if (!data) {
-                                return 'Rp 0';
-                            }
-
-                            return 'Rp ' + Number(data)
-                                .toLocaleString('id-ID');
-
-                        }
-
+                        className: 'text-end'
                     },
 
 
