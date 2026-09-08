@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Super\{RoleController, PermissionController, UserManageController, UserController};
 use App\Http\Controllers\Admin\{
 
+
     ProductController,
     ProductPriceController,
     HolidayController,
