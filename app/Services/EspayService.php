@@ -10,243 +10,109 @@ use RuntimeException;
 
 class EspayService
 {
+    private const DEFAULT_QRIS_ENDPOINT = '/api/v1.0/qr/qr-mpm-generate';
+
+    private const DEFAULT_PRODUCT_CODE = 'QRIS';
+
+    private const DEFAULT_CHANNEL_ID = 'ESPAY';
+
+    private const QRIS_VALIDITY_MINUTES = 10;
+
+    private const QRIS_SUCCESS_CODE = '2004700';
+
     /**
-     * Generate QRIS menggunakan Espay SNAP API.
+     * Generate QRIS payment melalui Espay SNAP API.
      */
     public function generateQris(Payment $payment): array
     {
         $payment->loadMissing('order');
 
+        $this->validatePayment($payment);
+
         $order = $payment->order;
 
-        if (! $order) {
-            throw new RuntimeException(
-                'Order untuk payment tidak ditemukan.'
-            );
-        }
+        $qrExpiredAt = now('Asia/Jakarta')
+            ->addMinutes(self::QRIS_VALIDITY_MINUTES);
 
-        $this->validateQrisConfiguration();
-
-        if (! $payment->expired_at) {
-            throw new RuntimeException(
-                'Payment belum memiliki waktu expired.'
-            );
-        }
-
-        /*
-         * partnerReferenceNo:
-         * - maksimal 32 karakter
-         * - alphanumeric
-         * - harus unik
-         *
-         * Contoh:
-         * DS15P12
-         */
         $partnerReferenceNo = $this->generatePartnerReference(
             $order->id,
             $payment->id
         );
 
-        /*
-         * Timestamp menggunakan timezone Jakarta.
-         */
         $timestamp = now('Asia/Jakarta')
             ->format('Y-m-d\TH:i:sP');
 
-        /*
-         * X-EXTERNAL-ID:
-         * numeric dan unik pada hari yang sama.
-         */
         $externalId = $this->generateExternalId(
             $payment->id
         );
 
-        /*
-         * Request body.
-         *
-         * JSON ini juga yang digunakan untuk
-         * membuat signature.
-         */
-        $body = [
-            'partnerReferenceNo' => $partnerReferenceNo,
-
-            'merchantId' => config(
-                'espay.merchant_code'
-            ),
-
-            'amount' => [
-                'value' => number_format(
-                    (float) $payment->amount,
-                    2,
-                    '.',
-                    ''
-                ),
-                'currency' => 'IDR',
-            ],
-
-            'additionalInfo' => [
-                'productCode' => config(
-                    'espay.product_code',
-                    'QRIS'
-                ),
-            ],
-
-            // 'validityPeriod' => $payment->expired_at
-            //     ->copy()
-            //     ->timezone('Asia/Jakarta')
-            //     ->format('Y-m-d\TH:i:sP'),
-
-        ];
-
-        /*
-         * JSON harus sama persis dengan JSON
-         * yang dikirim ke Espay.
-         */
-        $jsonBody = json_encode(
-            $body,
-            JSON_UNESCAPED_SLASHES |
-                JSON_UNESCAPED_UNICODE
+        $body = $this->buildQrisPayload(
+            payment: $payment,
+            partnerReferenceNo: $partnerReferenceNo,
+            qrExpiredAt: $qrExpiredAt,
         );
 
-        if ($jsonBody === false) {
-            throw new RuntimeException(
-                'Gagal membuat JSON request Espay.'
-            );
-        }
+        $jsonBody = $this->encodeJson($body);
 
         $relativeUrl = config(
             'espay.qris_endpoint',
-            '/api/v1.0/qr/qr-mpm-generate'
+            self::DEFAULT_QRIS_ENDPOINT
         );
 
-        /*
-         * Generate asymmetric RSA SHA-256 signature.
-         */
         $signature = $this->generateSignature(
             httpMethod: 'POST',
             relativeUrl: $relativeUrl,
             body: $jsonBody,
-            timestamp: $timestamp
+            timestamp: $timestamp,
         );
 
-        /*
-         * Header SNAP Espay.
-         */
-        $headers = [
-            'Content-Type' => 'application/json',
-            'X-TIMESTAMP' => $timestamp,
-            'X-SIGNATURE' => $signature,
-            'X-EXTERNAL-ID' => $externalId,
-            'X-PARTNER-ID' => config(
-                'espay.merchant_code'
-            ),
-            'CHANNEL-ID' => config(
-                'espay.channel_id',
-                'ESPAY'
-            ),
-        ];
+        $headers = $this->buildHeaders(
+            timestamp: $timestamp,
+            signature: $signature,
+            externalId: $externalId,
+        );
 
-        /*
-         * URL endpoint.
-         */
         $url = $this->buildUrl($relativeUrl);
 
-        /*
-         * DEBUG LOG
-         *
-         * Jangan pernah log:
-         * - API Key
-         * - Password
-         * - Private Key
-         * - X-SIGNATURE
-         */
-        Log::info('ESPay QRIS Payload', [
-            'body' => $body,
-
-            'headers' => [
-                'Content-Type' =>
-                $headers['Content-Type'] ?? null,
-
-                'X-TIMESTAMP' =>
-                $headers['X-TIMESTAMP'] ?? null,
-
-                'X-EXTERNAL-ID' =>
-                $headers['X-EXTERNAL-ID'] ?? null,
-
-                'X-PARTNER-ID' =>
-                $headers['X-PARTNER-ID'] ?? null,
-
-                'CHANNEL-ID' =>
-                $headers['CHANNEL-ID'] ?? null,
-            ],
-
-            'json_body' => $jsonBody,
-
-            'relative_url' => $relativeUrl,
-
-            'url' => $url,
-        ]);
-
-        /*
-         * Log request ringkas.
-         */
-        Log::info('ESPay QRIS Request', [
-            'order_number' => $order->order_number,
-
-            'payment_number' =>
-            $payment->payment_number,
-
-            'partner_reference_no' =>
-            $partnerReferenceNo,
-
-            'external_id' =>
-            $externalId,
-
-            'merchant_code' =>
-            config('espay.merchant_code'),
-
-            'product_code' =>
-            config(
-                'espay.product_code',
-                'QRIS'
-            ),
-
-            'url' => $url,
-
-            'timestamp' => $timestamp,
-        ]);
-
-        /*
-         * Kirim request ke Espay.
-         */
-        $response = Http::timeout(
-            (int) config(
-                'espay.timeout',
-                30
-            )
-        )
-            ->withHeaders($headers)
-            ->withBody(
-                $jsonBody,
-                'application/json'
-            )
-            ->post($url);
-
-        /*
-         * Handle response Espay.
-         */
-        return $this->handleQrisResponse(
-            $response,
-            $payment,
-            $externalId
+        $this->logQrisRequest(
+            payment: $payment,
+            order: $order,
+            body: $body,
+            headers: $headers,
+            jsonBody: $jsonBody,
+            relativeUrl: $relativeUrl,
+            url: $url,
         );
+
+        $response = $this->sendQrisRequest(
+            url: $url,
+            headers: $headers,
+            jsonBody: $jsonBody,
+        );
+
+        $this->logQrisFullResponse(
+            $payment,
+            $response,
+        );
+
+        $qris = $this->handleQrisResponse(
+            response: $response,
+            payment: $payment,
+            externalId: $externalId,
+        );
+
+        /*
+         * Hanya update expiry jika QRIS berhasil dibuat.
+         */
+        $payment->update([
+            'expired_at' => $qrExpiredAt,
+        ]);
+
+        return $qris;
     }
 
     /**
      * Inquiry Merchant Info Espay.
-     *
-     * Digunakan untuk memastikan API Key valid
-     * dan melihat produk yang tersedia.
      */
     public function merchantInfo(): array
     {
@@ -258,18 +124,10 @@ class EspayService
             );
         }
 
-        $url = rtrim(
-            config('espay.base_url'),
-            '/'
-        ) . '/rest/merchant/merchantinfo';
+        $url = $this->buildUrl('/rest/merchant/merchantinfo');
 
         $response = Http::asForm()
-            ->timeout(
-                (int) config(
-                    'espay.timeout',
-                    30
-                )
-            )
+            ->timeout($this->getTimeout())
             ->post($url, [
                 'key' => $apiKey,
             ]);
@@ -291,16 +149,12 @@ class EspayService
             );
         }
 
-        if (
-            ($data['error_code'] ?? null) !==
-            '0000'
-        ) {
+        if (($data['error_code'] ?? null) !== '0000') {
             throw new RuntimeException(
                 'Espay Merchant Info error [' .
                     ($data['error_code'] ?? 'UNKNOWN') .
                     ']: ' .
-                    ($data['error_message'] ??
-                        'Unknown error')
+                    ($data['error_message'] ?? 'Unknown error')
             );
         }
 
@@ -308,210 +162,94 @@ class EspayService
     }
 
     /**
-     * Generate partner reference number.
-     *
-     * Format:
-     * DS{order_id}P{payment_id}
-     *
-     * Contoh:
-     * DS15P12
+     * Build QRIS request payload.
      */
-    private function generatePartnerReference(
-        int $orderId,
-        int $paymentId
-    ): string {
-        return 'DS' .
-            $orderId .
-            'P' .
-            $paymentId;
-    }
+    private function buildQrisPayload(
+        Payment $payment,
+        string $partnerReferenceNo,
+        \Carbon\CarbonInterface $qrExpiredAt,
+    ): array {
+        return [
+            'partnerReferenceNo' => $partnerReferenceNo,
 
-    /**
-     * Generate X-EXTERNAL-ID.
-     *
-     * Numeric dan unique pada hari yang sama.
-     */
-    private function generateExternalId(
-        int $paymentId
-    ): string {
-        return now('Asia/Jakarta')
-            ->format('YmdHisv') .
-            str_pad(
-                (string) $paymentId,
-                8,
-                '0',
-                STR_PAD_LEFT
-            );
-    }
+            'merchantId' => config(
+                'espay.merchant_code'
+            ),
 
-    /**
-     * Generate RSA SHA-256 asymmetric signature.
-     *
-     * StringToSign:
-     *
-     * HTTPMethod:
-     * RelativeUrl:
-     * SHA256(minified JSON):
-     * Timestamp
-     */
-    private function generateSignature(
-        string $httpMethod,
-        string $relativeUrl,
-        string $body,
-        string $timestamp
-    ): string {
-        $privateKeyPath = config(
-            'espay.private_key_path'
-        );
+            'amount' => [
+                'value' => number_format(
+                    (float) $payment->amount,
+                    2,
+                    '.',
+                    ''
+                ),
+                'currency' => 'IDR',
+            ],
 
-        if (! $privateKeyPath) {
-            throw new RuntimeException(
-                'ESPAY_PRIVATE_KEY_PATH belum dikonfigurasi.'
-            );
-        }
+            'additionalInfo' => [
+                'productCode' => config(
+                    'espay.product_code',
+                    self::DEFAULT_PRODUCT_CODE
+                ),
+            ],
 
-        /*
-         * Jika path relatif, ubah menjadi absolute path
-         * berdasarkan root Laravel.
-         */
-        if (
-            ! str_starts_with(
-                $privateKeyPath,
-                DIRECTORY_SEPARATOR
-            ) &&
-            ! preg_match(
-                '/^[A-Za-z]:[\\\\\/]/',
-                $privateKeyPath
-            )
-        ) {
-            $privateKeyPath = base_path(
-                $privateKeyPath
-            );
-        }
-
-        if (! is_file($privateKeyPath)) {
-            throw new RuntimeException(
-                "Private key Espay tidak ditemukan: {$privateKeyPath}"
-            );
-        }
-
-        $privateKey = file_get_contents(
-            $privateKeyPath
-        );
-
-        if ($privateKey === false) {
-            throw new RuntimeException(
-                'Gagal membaca private key Espay.'
-            );
-        }
-
-        /*
-         * SHA-256 body.
-         */
-        $bodyHash = strtolower(
-            hash('sha256', $body)
-        );
-
-        /*
-         * StringToSign SNAP.
-         */
-        $stringToSign =
-            strtoupper($httpMethod) .
-            ':' .
-            $relativeUrl .
-            ':' .
-            $bodyHash .
-            ':' .
-            $timestamp;
-
-        /*
-         * Load RSA private key.
-         */
-        $privateKeyResource =
-            openssl_pkey_get_private(
-                $privateKey
-            );
-
-        if ($privateKeyResource === false) {
-            throw new RuntimeException(
-                'Private key Espay tidak valid.'
-            );
-        }
-
-        /*
-         * Sign menggunakan SHA-256.
-         */
-        $signature = '';
-
-        $success = openssl_sign(
-            $stringToSign,
-            $signature,
-            $privateKeyResource,
-            OPENSSL_ALGO_SHA256
-        );
-
-        if (! $success) {
-            throw new RuntimeException(
-                'Gagal membuat RSA SHA-256 signature Espay.'
-            );
-        }
-
-        return base64_encode(
-            $signature
-        );
-    }
-
-    /**
-     * Build full Espay URL.
-     */
-    private function buildUrl(
-        string $relativeUrl
-    ): string {
-        return rtrim(
-            config('espay.base_url'),
-            '/'
-        ) .
-            '/' .
-            ltrim(
-                $relativeUrl,
-                '/'
-            );
-    }
-
-    /**
-     * Validate konfigurasi QRIS.
-     */
-    private function validateQrisConfiguration(): void
-    {
-        $required = [
-            'espay.base_url' =>
-            config('espay.base_url'),
-
-            'espay.merchant_code' =>
-            config('espay.merchant_code'),
-
-            'espay.product_code' =>
-            config('espay.product_code'),
-
-            'espay.channel_id' =>
-            config('espay.channel_id'),
-
-            'espay.private_key_path' =>
-            config('espay.private_key_path'),
-
-            'espay.qris_endpoint' =>
-            config('espay.qris_endpoint'),
+            'validityPeriod' => $qrExpiredAt
+                ->copy()
+                ->timezone('Asia/Jakarta')
+                ->format('Y-m-d\TH:i:sP'),
         ];
+    }
 
-        foreach ($required as $key => $value) {
-            if (
-                $value === null ||
-                $value === ''
-            ) {
-                throw new RuntimeException(
-                    "Konfigurasi Espay '{$key}' belum tersedia."
-                );
-            }
+    /**
+     * Build SNAP headers.
+     */
+    private function buildHeaders(
+        string $timestamp,
+        string $signature,
+        string $externalId,
+    ): array {
+        return [
+            'Content-Type' => 'application/json',
+            'X-TIMESTAMP' => $timestamp,
+            'X-SIGNATURE' => $signature,
+            'X-EXTERNAL-ID' => $externalId,
+            'X-PARTNER-ID' => config(
+                'espay.merchant_code'
+            ),
+            'CHANNEL-ID' => config(
+                'espay.channel_id',
+                self::DEFAULT_CHANNEL_ID
+            ),
+        ];
+    }
+
+    /**
+     * Send QRIS request ke Espay.
+     */
+    private function sendQrisRequest(
+        string $url,
+        array $headers,
+        string $jsonBody,
+    ): Response {
+        try {
+            return Http::timeout($this->getTimeout())
+                ->withHeaders($headers)
+                ->withBody(
+                    $jsonBody,
+                    'application/json'
+                )
+                ->post($url);
+        } catch (\Throwable $e) {
+            Log::error('ESPay QRIS HTTP Exception', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new RuntimeException(
+                'Gagal menghubungi Espay QRIS: ' .
+                    $e->getMessage(),
+                previous: $e
+            );
         }
     }
 
@@ -521,28 +259,25 @@ class EspayService
     private function handleQrisResponse(
         Response $response,
         Payment $payment,
-        string $externalId
+        string $externalId,
     ): array {
         $data = $response->json();
 
         Log::info('ESPay QRIS Response', [
-            'payment_number' =>
-            $payment->payment_number,
-
-            'http_status' =>
-            $response->status(),
-
-            'response_code' =>
-            $data['responseCode'] ?? null,
-
-            'response_message' =>
-            $data['responseMessage'] ?? null,
-
-            'has_qr_url' =>
-            ! empty($data['qrUrl']),
-
-            'has_qr_content' =>
-            ! empty($data['qrContent']),
+            'payment_number' => $payment->payment_number,
+            'http_status' => $response->status(),
+            'response_code' => is_array($data)
+                ? ($data['responseCode'] ?? null)
+                : null,
+            'response_message' => is_array($data)
+                ? ($data['responseMessage'] ?? null)
+                : null,
+            'has_qr_url' => is_array($data)
+                && ! empty($data['qrUrl']),
+            'has_qr_content' => is_array($data)
+                && ! empty($data['qrContent']),
+            'has_qr_image' => is_array($data)
+                && ! empty($data['qrImage']),
         ]);
 
         /*
@@ -566,33 +301,24 @@ class EspayService
             );
         }
 
+        $responseCode = $data['responseCode'] ?? null;
+
         /*
-         * Success:
-         * 2004700
+         * Espay success.
          */
-        if (
-            ($data['responseCode'] ?? null) !==
-            '2004700'
-        ) {
+        if ($responseCode !== self::QRIS_SUCCESS_CODE) {
             throw new RuntimeException(
                 'ESPay menolak request QRIS: ' .
-                    ($data['responseCode'] ??
-                        'NO_RESPONSE_CODE') .
+                    ($responseCode ?? 'NO_RESPONSE_CODE') .
                     ' - ' .
-                    ($data['responseMessage'] ??
-                        'Unknown error') .
+                    ($data['responseMessage'] ?? 'Unknown error') .
                     ' | RAW: ' .
-                    json_encode(
-                        $data,
-                        JSON_UNESCAPED_SLASHES |
-                            JSON_UNESCAPED_UNICODE
-                    )
+                    $this->safeJsonEncode($data)
             );
         }
 
         return [
-            'response_code' =>
-            $data['responseCode'] ?? null,
+            'response_code' => $responseCode,
 
             'response_message' =>
             $data['responseMessage'] ?? null,
@@ -624,11 +350,428 @@ class EspayService
                 'additionalInfo.amount'
             ),
 
-            'external_id' =>
-            $externalId,
+            'external_id' => $externalId,
 
-            'raw' =>
-            $data,
+            'raw' => $data,
         ];
+    }
+
+    /**
+     * Generate partner reference number.
+     *
+     * Format:
+     * DS{orderId}P{paymentId}
+     *
+     * Contoh:
+     * DS18P15
+     */
+    private function generatePartnerReference(
+        int $orderId,
+        int $paymentId,
+    ): string {
+        $reference = 'DS' .
+            $orderId .
+            'P' .
+            $paymentId;
+
+        if (
+            strlen($reference) > 32 ||
+            ! preg_match('/^[A-Za-z0-9]+$/', $reference)
+        ) {
+            throw new RuntimeException(
+                'Partner reference number Espay tidak valid: ' .
+                    $reference
+            );
+        }
+
+        return $reference;
+    }
+
+    /**
+     * Generate X-EXTERNAL-ID.
+     *
+     * Numeric dan unique pada hari yang sama.
+     */
+    private function generateExternalId(
+        int $paymentId,
+    ): string {
+        return now('Asia/Jakarta')
+            ->format('YmdHisv') .
+            str_pad(
+                (string) $paymentId,
+                8,
+                '0',
+                STR_PAD_LEFT
+            );
+    }
+
+    /**
+     * Generate asymmetric RSA SHA-256 signature.
+     *
+     * StringToSign:
+     *
+     * HTTPMethod:
+     * RelativeUrl:
+     * SHA256(minified JSON):
+     * Timestamp
+     */
+    private function generateSignature(
+        string $httpMethod,
+        string $relativeUrl,
+        string $body,
+        string $timestamp,
+    ): string {
+        $privateKeyPath = config(
+            'espay.private_key_path'
+        );
+
+        if (! $privateKeyPath) {
+            throw new RuntimeException(
+                'ESPAY_PRIVATE_KEY_PATH belum dikonfigurasi.'
+            );
+        }
+
+        $privateKeyPath = $this->resolvePrivateKeyPath(
+            $privateKeyPath
+        );
+
+        if (! is_file($privateKeyPath)) {
+            throw new RuntimeException(
+                "Private key Espay tidak ditemukan: {$privateKeyPath}"
+            );
+        }
+
+        $privateKey = file_get_contents(
+            $privateKeyPath
+        );
+
+        if ($privateKey === false) {
+            throw new RuntimeException(
+                'Gagal membaca private key Espay.'
+            );
+        }
+
+        $bodyHash = strtolower(
+            hash('sha256', $body)
+        );
+
+        $stringToSign =
+            strtoupper($httpMethod) .
+            ':' .
+            $relativeUrl .
+            ':' .
+            $bodyHash .
+            ':' .
+            $timestamp;
+
+        $privateKeyResource = openssl_pkey_get_private(
+            $privateKey
+        );
+
+        if ($privateKeyResource === false) {
+            throw new RuntimeException(
+                'Private key Espay tidak valid.'
+            );
+        }
+
+        $signature = '';
+
+        $success = openssl_sign(
+            $stringToSign,
+            $signature,
+            $privateKeyResource,
+            OPENSSL_ALGO_SHA256
+        );
+
+        if (! $success) {
+            throw new RuntimeException(
+                'Gagal membuat RSA SHA-256 signature Espay.'
+            );
+        }
+
+        return base64_encode($signature);
+    }
+
+    /**
+     * Resolve private key path.
+     */
+    private function resolvePrivateKeyPath(
+        string $path
+    ): string {
+        if (
+            str_starts_with(
+                $path,
+                DIRECTORY_SEPARATOR
+            ) ||
+            preg_match(
+                '/^[A-Za-z]:[\\\\\/]/',
+                $path
+            )
+        ) {
+            return $path;
+        }
+
+        return base_path($path);
+    }
+
+    /**
+     * Build full Espay URL.
+     */
+    private function buildUrl(
+        string $relativeUrl
+    ): string {
+        return rtrim(
+            config('espay.base_url'),
+            '/'
+        ) .
+            '/' .
+            ltrim(
+                $relativeUrl,
+                '/'
+            );
+    }
+
+    /**
+     * Encode JSON dengan format yang konsisten.
+     */
+    private function encodeJson(
+        array $data
+    ): string {
+        $json = json_encode(
+            $data,
+            JSON_UNESCAPED_SLASHES |
+                JSON_UNESCAPED_UNICODE
+        );
+
+        if ($json === false) {
+            throw new RuntimeException(
+                'Gagal membuat JSON request Espay: ' .
+                    json_last_error_msg()
+            );
+        }
+
+        return $json;
+    }
+
+    /**
+     * Safe JSON untuk logging/error.
+     */
+    private function safeJsonEncode(
+        mixed $data
+    ): string {
+        $json = json_encode(
+            $data,
+            JSON_UNESCAPED_SLASHES |
+                JSON_UNESCAPED_UNICODE
+        );
+
+        return $json !== false
+            ? $json
+            : 'JSON_ENCODE_ERROR';
+    }
+
+    /**
+     * Validate payment sebelum Generate QRIS.
+     */
+    private function validatePayment(
+        Payment $payment
+    ): void {
+        if (! $payment->order) {
+            throw new RuntimeException(
+                'Order untuk payment tidak ditemukan.'
+            );
+        }
+
+        $this->validateQrisConfiguration();
+
+        if (
+            ! $payment->amount ||
+            (float) $payment->amount <= 0
+        ) {
+            throw new RuntimeException(
+                'Nominal payment QRIS tidak valid.'
+            );
+        }
+
+        if (
+            $payment->status === 'PAID'
+        ) {
+            throw new RuntimeException(
+                'Payment sudah dibayar.'
+            );
+        }
+
+        if (
+            $payment->status === 'CANCELLED'
+        ) {
+            throw new RuntimeException(
+                'Payment sudah dibatalkan.'
+            );
+        }
+    }
+
+    /**
+     * Validate konfigurasi Espay QRIS.
+     */
+    private function validateQrisConfiguration(): void
+    {
+        $required = [
+            'espay.base_url' =>
+            config('espay.base_url'),
+
+            'espay.merchant_code' =>
+            config('espay.merchant_code'),
+
+            'espay.product_code' =>
+            config(
+                'espay.product_code',
+                self::DEFAULT_PRODUCT_CODE
+            ),
+
+            'espay.channel_id' =>
+            config(
+                'espay.channel_id',
+                self::DEFAULT_CHANNEL_ID
+            ),
+
+            'espay.private_key_path' =>
+            config('espay.private_key_path'),
+
+            'espay.qris_endpoint' =>
+            config(
+                'espay.qris_endpoint',
+                self::DEFAULT_QRIS_ENDPOINT
+            ),
+        ];
+
+        foreach ($required as $key => $value) {
+            if (
+                $value === null ||
+                $value === ''
+            ) {
+                throw new RuntimeException(
+                    "Konfigurasi Espay '{$key}' belum tersedia."
+                );
+            }
+        }
+    }
+
+    /**
+     * Get HTTP timeout.
+     */
+    private function getTimeout(): int
+    {
+        return max(
+            1,
+            (int) config(
+                'espay.timeout',
+                30
+            )
+        );
+    }
+
+    /**
+     * Log request QRIS.
+     *
+     * Tidak pernah menyimpan:
+     * - API Key
+     * - Password
+     * - Private Key
+     * - X-SIGNATURE
+     */
+    private function logQrisRequest(
+        Payment $payment,
+        $order,
+        array $body,
+        array $headers,
+        string $jsonBody,
+        string $relativeUrl,
+        string $url,
+    ): void {
+        Log::info('ESPay QRIS Payload', [
+            'body' => $body,
+
+            'headers' => [
+                'Content-Type' =>
+                $headers['Content-Type'] ?? null,
+
+                'X-TIMESTAMP' =>
+                $headers['X-TIMESTAMP'] ?? null,
+
+                'X-EXTERNAL-ID' =>
+                $headers['X-EXTERNAL-ID'] ?? null,
+
+                'X-PARTNER-ID' =>
+                $headers['X-PARTNER-ID'] ?? null,
+
+                'CHANNEL-ID' =>
+                $headers['CHANNEL-ID'] ?? null,
+            ],
+
+            'json_body' => $jsonBody,
+
+            'relative_url' => $relativeUrl,
+
+            'url' => $url,
+        ]);
+
+        Log::info('ESPay QRIS Request', [
+            'order_number' =>
+            $order->order_number,
+
+            'payment_number' =>
+            $payment->payment_number,
+
+            'partner_reference_no' =>
+            $body['partnerReferenceNo'] ?? null,
+
+            'external_id' =>
+            $headers['X-EXTERNAL-ID'] ?? null,
+
+            'merchant_code' =>
+            config('espay.merchant_code'),
+
+            'product_code' =>
+            data_get(
+                $body,
+                'additionalInfo.productCode'
+            ),
+
+            'amount' =>
+            data_get(
+                $body,
+                'amount.value'
+            ),
+
+            'url' => $url,
+
+            'timestamp' =>
+            $headers['X-TIMESTAMP'] ?? null,
+        ]);
+    }
+
+    /**
+     * Log response lengkap dari Espay.
+     */
+    private function logQrisFullResponse(
+        Payment $payment,
+        Response $response,
+    ): void {
+        Log::info('ESPay QRIS FULL RESPONSE', [
+            'payment_number' =>
+            $payment->payment_number,
+
+            'http_status' =>
+            $response->status(),
+
+            'headers' =>
+            $response->headers(),
+
+            'body' =>
+            $response->body(),
+
+            'json' =>
+            $response->json(),
+        ]);
     }
 }
