@@ -482,6 +482,18 @@ class EspayService
             $privateKeyResource,
             OPENSSL_ALGO_SHA256
         );
+    
+    
+Log::info('ESPay QRIS SIGNATURE DEBUG', [
+    'method' => 'POST',
+    'relative_url' => $relativeUrl,
+    'body_hash' => $bodyHash,
+    'timestamp' => $timestamp,
+    'string_to_sign' => $stringToSign,
+    'signature_length' => strlen($signature),
+]);
+    
+    
 
         if (! $success) {
             throw new RuntimeException(

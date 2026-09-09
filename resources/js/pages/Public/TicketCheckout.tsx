@@ -200,28 +200,25 @@ export default function TicketCheckout({
         /*
          * Sunday = 0
          * Monday = 1
+         * Tuesday = 2
+         * Wednesday = 3
+         * Thursday = 4
+         * Friday = 5
+         * Saturday = 6
          *
-         * Kita ubah menjadi:
-         *
-         * Monday = 0
-         * ...
-         * Sunday = 6
+         * Calendar menggunakan:
+         * Min | Sen | Sel | Rab | Kam | Jum | Sab
          */
 
-        const startDay =
-            firstDay.getDay() === 0
-                ? 6
-                : firstDay.getDay() - 1;
+        const startDay = firstDay.getDay();
 
-        const totalDays =
-            lastDay.getDate();
+        const totalDays = lastDay.getDate();
 
-        const previousMonthLastDay =
-            new Date(
-                calendarYear,
-                calendarMonth,
-                0
-            ).getDate();
+        const previousMonthLastDay = new Date(
+            calendarYear,
+            calendarMonth,
+            0
+        ).getDate();
 
         const days: Array<{
             day: number;
@@ -233,11 +230,7 @@ export default function TicketCheckout({
          * Previous month
          */
 
-        for (
-            let i = startDay - 1;
-            i >= 0;
-            i--
-        ) {
+        for (let i = startDay - 1; i >= 0; i--) {
             const day =
                 previousMonthLastDay - i;
 
@@ -262,7 +255,6 @@ export default function TicketCheckout({
             });
         }
 
-
         /*
          * Current month
          */
@@ -282,7 +274,6 @@ export default function TicketCheckout({
                 ),
             });
         }
-
 
         /*
          * Next month
@@ -987,7 +978,7 @@ export default function TicketCheckout({
 
                                     <span className="min-w-0 break-words">
                                         I agree with Term And Condition and
-                                        Privacy Policy of Saloka Theme Park
+                                        Privacy Policy of Dusun Semilir
                                     </span>
                                 </label>
                             </div>

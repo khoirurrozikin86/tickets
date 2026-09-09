@@ -67,6 +67,14 @@ return [
         'storage/app/private/espay/private.key'
     ),
 
+
+    'public_key_path' => env(
+    'ESPAY_PUBLIC_KEY_PATH',
+    'storage/app/private/espay/public.key'
+),
+
+
+
     /*
     |--------------------------------------------------------------------------
     | HTTP

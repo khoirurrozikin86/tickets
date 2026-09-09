@@ -22,7 +22,7 @@ type Payment = {
     paymentNumber: string;
     gateway: string;
     method: string;
-    channel: string;
+    channel: string | null;
     amount: number;
     status: string;
     expiredAt?: string | null;
@@ -58,6 +58,28 @@ type Props = {
     reservation: Reservation;
 };
 
+const STATUS_LABELS: Record<string, string> = {
+    PENDING: 'Menunggu Pembayaran',
+    PAID: 'Sudah Dibayar',
+    SUCCESS: 'Berhasil',
+    COMPLETED: 'Selesai',
+    CANCELLED: 'Dibatalkan',
+    EXPIRED: 'Kadaluarsa',
+    ACTIVE: 'Aktif',
+    USED: 'Sudah Digunakan',
+};
+
+const STATUS_CLASSES: Record<string, string> = {
+    PAID: 'bg-[#e7f7f1] text-[#159f79]',
+    SUCCESS: 'bg-[#e7f7f1] text-[#159f79]',
+    COMPLETED: 'bg-[#e7f7f1] text-[#159f79]',
+    ACTIVE: 'bg-[#e7f7f1] text-[#159f79]',
+    PENDING: 'bg-amber-50 text-amber-600',
+    CANCELLED: 'bg-red-50 text-red-500',
+    EXPIRED: 'bg-red-50 text-red-500',
+    USED: 'bg-gray-100 text-gray-500',
+};
+
 function formatRupiah(value: number): string {
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -67,7 +89,9 @@ function formatRupiah(value: number): string {
 }
 
 function formatDate(date?: string | null): string {
-    if (!date) return '-';
+    if (!date) {
+        return '-';
+    }
 
     const value = date.substring(0, 10);
     const [year, month, day] = value.split('-');
@@ -90,41 +114,21 @@ function formatDate(date?: string | null): string {
 }
 
 function formatStatus(status: string): string {
-    const labels: Record<string, string> = {
-        PENDING: 'Menunggu Pembayaran',
-        PAID: 'Sudah Dibayar',
-        SUCCESS: 'Berhasil',
-        COMPLETED: 'Selesai',
-        CANCELLED: 'Dibatalkan',
-        EXPIRED: 'Kadaluarsa',
-        ACTIVE: 'Aktif',
-        USED: 'Sudah Digunakan',
-    };
-
-    return labels[status] ?? status;
+    return STATUS_LABELS[status] ?? status;
 }
 
-function statusClass(status: string): string {
-    switch (status) {
-        case 'PAID':
-        case 'SUCCESS':
-        case 'COMPLETED':
-        case 'ACTIVE':
-            return 'bg-[#e7f7f1] text-[#159f79]';
+function getStatusClass(status: string): string {
+    return STATUS_CLASSES[status] ?? 'bg-gray-100 text-gray-600';
+}
 
-        case 'PENDING':
-            return 'bg-amber-50 text-amber-600';
+function isPendingPayment(status: string): boolean {
+    return status === 'PENDING';
+}
 
-        case 'CANCELLED':
-        case 'EXPIRED':
-            return 'bg-red-50 text-red-500';
-
-        case 'USED':
-            return 'bg-gray-100 text-gray-500';
-
-        default:
-            return 'bg-gray-100 text-gray-600';
-    }
+function continuePayment(orderToken: string): void {
+    router.get('/payment', {
+        order: orderToken,
+    });
 }
 
 export default function ReservationDetail({
@@ -142,7 +146,7 @@ export default function ReservationDetail({
                     <button
                         type="button"
                         onClick={() => router.get('/reservasi')}
-                        className="mb-5 text-sm font-bold text-[#159f79] hover:text-[#128765]"
+                        className="mb-5 text-sm font-bold text-[#159f79] transition hover:text-[#128765]"
                     >
                         ← Kembali ke Pencarian
                     </button>
@@ -150,7 +154,6 @@ export default function ReservationDetail({
                     {/* HEADER */}
                     <section className="rounded-3xl bg-white p-6 shadow-lg sm:p-8">
                         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
-
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                                     Nomor Reservasi
@@ -161,59 +164,38 @@ export default function ReservationDetail({
                                 </h1>
                             </div>
 
-                            <span
-                                className={`w-fit rounded-full px-4 py-2 text-xs font-bold ${statusClass(
-                                    reservation.paymentStatus,
-                                )}`}
-                            >
-                                {formatStatus(
-                                    reservation.paymentStatus,
-                                )}
-                            </span>
+                            <StatusBadge
+                                status={reservation.paymentStatus}
+                            />
                         </div>
                     </section>
 
                     {/* CUSTOMER */}
                     <section className="mt-5 rounded-3xl bg-white p-6 shadow-lg sm:p-8">
-                        <h2 className="text-lg font-black text-gray-800">
-                            Data Pemesan
-                        </h2>
+                        <SectionTitle title="Data Pemesan" />
 
                         <div className="mt-5 grid gap-5 sm:grid-cols-3">
-                            <div>
-                                <p className="text-xs text-gray-400">
-                                    Nama
-                                </p>
-                                <p className="mt-1 text-sm font-semibold text-gray-700">
-                                    {reservation.customerName || '-'}
-                                </p>
-                            </div>
+                            <InfoItem
+                                label="Nama"
+                                value={reservation.customerName}
+                            />
 
-                            <div>
-                                <p className="text-xs text-gray-400">
-                                    Email
-                                </p>
-                                <p className="mt-1 break-all text-sm font-semibold text-gray-700">
-                                    {reservation.customerEmail || '-'}
-                                </p>
-                            </div>
+                            <InfoItem
+                                label="Email"
+                                value={reservation.customerEmail}
+                                breakAll
+                            />
 
-                            <div>
-                                <p className="text-xs text-gray-400">
-                                    WhatsApp
-                                </p>
-                                <p className="mt-1 text-sm font-semibold text-gray-700">
-                                    {reservation.customerPhone || '-'}
-                                </p>
-                            </div>
+                            <InfoItem
+                                label="WhatsApp"
+                                value={reservation.customerPhone}
+                            />
                         </div>
                     </section>
 
                     {/* ITEMS */}
                     <section className="mt-5 rounded-3xl bg-white p-6 shadow-lg sm:p-8">
-                        <h2 className="text-lg font-black text-gray-800">
-                            Detail Tiket
-                        </h2>
+                        <SectionTitle title="Detail Tiket" />
 
                         <div className="mt-5 space-y-3">
                             {reservation.items.map((item, index) => (
@@ -228,10 +210,7 @@ export default function ReservationDetail({
                                             </p>
 
                                             <p className="mt-1 text-sm text-gray-500">
-                                                📅{' '}
-                                                {formatDate(
-                                                    item.visitDate,
-                                                )}
+                                                📅 {formatDate(item.visitDate)}
                                             </p>
 
                                             <p className="mt-1 text-xs text-gray-400">
@@ -240,114 +219,39 @@ export default function ReservationDetail({
                                         </div>
 
                                         <p className="font-bold text-[#159f79]">
-                                            {formatRupiah(
-                                                item.subtotal,
-                                            )}
+                                            {formatRupiah(item.subtotal)}
                                         </p>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="mt-6 border-t border-gray-100 pt-5">
-                            <div className="flex justify-between text-sm text-gray-500">
-                                <span>Subtotal</span>
-                                <span>
-                                    {formatRupiah(
-                                        reservation.subtotal,
-                                    )}
-                                </span>
-                            </div>
-
-                            {reservation.discountAmount > 0 && (
-                                <div className="mt-2 flex justify-between text-sm text-gray-500">
-                                    <span>Diskon</span>
-                                    <span className="text-[#159f79]">
-                                        -{' '}
-                                        {formatRupiah(
-                                            reservation.discountAmount,
-                                        )}
-                                    </span>
-                                </div>
-                            )}
-
-                            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
-                                <span className="font-black text-gray-800">
-                                    Total
-                                </span>
-
-                                <span className="text-xl font-black text-[#159f79]">
-                                    {formatRupiah(
-                                        reservation.totalAmount,
-                                    )}
-                                </span>
-                            </div>
-                        </div>
+                        <OrderSummary reservation={reservation} />
                     </section>
 
                     {/* PAYMENT */}
                     <section className="mt-5 rounded-3xl bg-white p-6 shadow-lg sm:p-8">
-                        <h2 className="text-lg font-black text-gray-800">
-                            Pembayaran
-                        </h2>
+                        <SectionTitle title="Pembayaran" />
 
                         {reservation.payments.length > 0 ? (
                             <div className="mt-5 space-y-3">
                                 {reservation.payments.map((payment) => (
-                                    <div
+                                    <PaymentCard
                                         key={payment.paymentNumber}
-                                        className="rounded-2xl border border-gray-100 p-4"
-                                    >
-                                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                                            <div>
-                                                <p className="text-xs text-gray-400">
-                                                    Nomor Pembayaran
-                                                </p>
-
-                                                <p className="mt-1 font-bold text-gray-800">
-                                                    {payment.paymentNumber}
-                                                </p>
-
-                                                <p className="mt-1 text-xs text-gray-500">
-                                                    {payment.method} •{' '}
-                                                    {payment.channel}
-                                                </p>
-                                            </div>
-
-                                            <div className="sm:text-right">
-                                                <p className="font-bold text-[#159f79]">
-                                                    {formatRupiah(
-                                                        payment.amount,
-                                                    )}
-                                                </p>
-
-                                                <span
-                                                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusClass(
-                                                        payment.status,
-                                                    )}`}
-                                                >
-                                                    {formatStatus(
-                                                        payment.status,
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        payment={payment}
+                                        orderToken={reservation.orderToken}
+                                    />
                                 ))}
                             </div>
                         ) : (
-                            <p className="mt-4 text-sm text-gray-400">
-                                Belum ada data pembayaran.
-                            </p>
+                            <EmptyMessage text="Belum ada data pembayaran." />
                         )}
                     </section>
 
                     {/* E-TICKET */}
                     <section className="mt-5 rounded-3xl bg-white p-6 shadow-lg sm:p-8">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-black text-gray-800">
-                                E-Tiket
-                            </h2>
+                            <SectionTitle title="E-Tiket" />
 
                             {reservation.tickets.length > 0 && (
                                 <span className="rounded-full bg-[#e7f7f1] px-3 py-1 text-xs font-bold text-[#159f79]">
@@ -374,22 +278,13 @@ export default function ReservationDetail({
                                                 </p>
 
                                                 <p className="mt-1 text-xs text-gray-500">
-                                                    📅{' '}
-                                                    {formatDate(
-                                                        ticket.visitDate,
-                                                    )}
+                                                    📅 {formatDate(ticket.visitDate)}
                                                 </p>
                                             </div>
 
-                                            <span
-                                                className={`w-fit rounded-full px-4 py-2 text-xs font-bold ${statusClass(
-                                                    ticket.status,
-                                                )}`}
-                                            >
-                                                {formatStatus(
-                                                    ticket.status,
-                                                )}
-                                            </span>
+                                            <StatusBadge
+                                                status={ticket.status}
+                                            />
                                         </div>
                                     </div>
                                 ))}
@@ -407,9 +302,156 @@ export default function ReservationDetail({
                             </div>
                         )}
                     </section>
-
                 </div>
             </main>
         </PublicLayout>
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
+| Reusable Components
+|--------------------------------------------------------------------------
+*/
+
+function SectionTitle({ title }: { title: string }) {
+    return (
+        <h2 className="text-lg font-black text-gray-800">
+            {title}
+        </h2>
+    );
+}
+
+function InfoItem({
+    label,
+    value,
+    breakAll = false,
+}: {
+    label: string;
+    value?: string | null;
+    breakAll?: boolean;
+}) {
+    return (
+        <div>
+            <p className="text-xs text-gray-400">
+                {label}
+            </p>
+
+            <p
+                className={`mt-1 text-sm font-semibold text-gray-700 ${breakAll ? 'break-all' : ''
+                    }`}
+            >
+                {value || '-'}
+            </p>
+        </div>
+    );
+}
+
+function StatusBadge({ status }: { status: string }) {
+    return (
+        <span
+            className={`w-fit rounded-full px-4 py-2 text-xs font-bold ${getStatusClass(
+                status,
+            )}`}
+        >
+            {formatStatus(status)}
+        </span>
+    );
+}
+
+function EmptyMessage({ text }: { text: string }) {
+    return (
+        <p className="mt-4 text-sm text-gray-400">
+            {text}
+        </p>
+    );
+}
+
+function OrderSummary({
+    reservation,
+}: {
+    reservation: Reservation;
+}) {
+    return (
+        <div className="mt-6 border-t border-gray-100 pt-5">
+            <div className="flex justify-between text-sm text-gray-500">
+                <span>Subtotal</span>
+
+                <span>
+                    {formatRupiah(reservation.subtotal)}
+                </span>
+            </div>
+
+            {reservation.discountAmount > 0 && (
+                <div className="mt-2 flex justify-between text-sm text-gray-500">
+                    <span>Diskon</span>
+
+                    <span className="text-[#159f79]">
+                        - {formatRupiah(reservation.discountAmount)}
+                    </span>
+                </div>
+            )}
+
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+                <span className="font-black text-gray-800">
+                    Total
+                </span>
+
+                <span className="text-xl font-black text-[#159f79]">
+                    {formatRupiah(reservation.totalAmount)}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function PaymentCard({
+    payment,
+    orderToken,
+}: {
+    payment: Payment;
+    orderToken: string;
+}) {
+    const pending = isPendingPayment(payment.status);
+
+    return (
+        <div className="rounded-2xl border border-gray-100 p-4">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                    <p className="text-xs text-gray-400">
+                        Nomor Pembayaran
+                    </p>
+
+                    <p className="mt-1 font-bold text-gray-800">
+                        {payment.paymentNumber}
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                        {payment.method}
+                        {payment.channel
+                            ? ` • ${payment.channel}`
+                            : ''}
+                    </p>
+                </div>
+
+                <div className="sm:text-right">
+                    <p className="font-bold text-[#159f79]">
+                        {formatRupiah(payment.amount)}
+                    </p>
+
+                    <StatusBadge status={payment.status} />
+
+                    {pending && (
+                        <button
+                            type="button"
+                            onClick={() => continuePayment(orderToken)}
+                            className="mt-3 inline-flex items-center justify-center rounded-full bg-[#159f79] px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-[#128765] active:scale-95"
+                        >
+                            Lanjutkan Pembayaran
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }
