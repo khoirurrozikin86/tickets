@@ -242,12 +242,35 @@ Route::middleware(['auth'])
 
 
 
+                /*
+        |--------------------------------------------------------------------------
+        | Discount Usage History
+        |--------------------------------------------------------------------------
+        */
+
+                // Halaman usage
                 Route::get('/{discount}/usages', [
                     DiscountUsageController::class,
-                    'index'
+                    'index',
                 ])
                     ->middleware('permission:discounts.view')
                     ->name('usages');
+
+                // DataTables
+                Route::get('/{discount}/usages/dt', [
+                    DiscountUsageController::class,
+                    'dt',
+                ])
+                    ->middleware('permission:discounts.view')
+                    ->name('usages.dt');
+
+                // Export Excel
+                Route::get('/{discount}/usages/export', [
+                    DiscountUsageController::class,
+                    'export',
+                ])
+                    ->middleware('permission:discounts.view')
+                    ->name('usages.export');
             });
 
 
