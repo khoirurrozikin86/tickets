@@ -17,6 +17,7 @@ interface VoucherResult {
     name: string;
     type: string;
     value: number;
+    min_purchase: number;
 }
 
 interface Props {
@@ -592,12 +593,41 @@ export default function TicketCheckout({
     function handleConfirmCheckout() {
         setShowDateConfirmation(false);
 
-        router.get('/checkout', {
-            product: product.slug,
-            date,
-            quantity,
-            voucher: voucherApplied?.code ?? '',
-        });
+        router.get(
+            '/checkout',
+            {
+                product: product.slug,
+                date,
+                quantity,
+                voucher: voucherApplied?.code ?? '',
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+
+                onError: (errors) => {
+                    const voucherError =
+                        errors.voucher;
+
+                    if (voucherError) {
+                        setVoucherError(
+                            Array.isArray(voucherError)
+                                ? voucherError[0]
+                                : voucherError
+                        );
+
+                        setVoucherApplied(null);
+                        setDiscountAmount(0);
+
+                        return;
+                    }
+
+                    setVoucherError(
+                        'Checkout tidak dapat diproses. Silakan periksa kembali data Anda.'
+                    );
+                },
+            }
+        );
     }
 
 
@@ -961,6 +991,29 @@ export default function TicketCheckout({
                                     {voucherLoading ? '...' : 'Gunakan'}
                                 </button>
                             </div>
+
+
+                            {/* =================================================
+                                VOUCHER MESSAGE
+                            ================================================= */}
+
+                            {voucherError && (
+                                <div
+                                    role="alert"
+                                    className="mx-auto mt-2 w-full max-w-[760px] rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+                                >
+                                    {voucherError}
+                                </div>
+                            )}
+
+                            {voucherMessage && !voucherError && (
+                                <div
+                                    role="status"
+                                    className="mx-auto mt-2 w-full max-w-[760px] rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-600"
+                                >
+                                    {voucherMessage}
+                                </div>
+                            )}
 
 
                             {/* =================================================

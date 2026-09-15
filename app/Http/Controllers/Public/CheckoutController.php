@@ -2,22 +2,19 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Domain\Checkout\Actions\CreateCheckoutAction;
+use App\Domain\Checkout\DTOs\CheckoutData;
+use App\Domain\Checkout\Services\CheckoutPricingService;
 use App\Http\Controllers\Controller;
-use App\Models\Discount;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Payment;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use App\Http\Requests\Public\CheckoutRequest;
 use App\Models\Product;
 use App\Models\SiteSetting;
+use App\Domain\Payments\Services\EspayService;
 use App\Services\PriceResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Log;
-
-use App\Services\EspayService;
 
 class CheckoutController extends Controller
 {
@@ -26,7 +23,7 @@ class CheckoutController extends Controller
      */
     public function show(
         Request $request,
-        PriceResolver $priceResolver
+        CheckoutPricingService $pricingService,
     ): Response {
         $validated = $request->validate([
             'product' => [
@@ -34,172 +31,6 @@ class CheckoutController extends Controller
                 'string',
                 'exists:products,slug',
             ],
-            'date' => [
-                'required',
-                'date',
-                'after_or_equal:today',
-            ],
-            'quantity' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:20',
-            ],
-            'voucher' => [
-                'nullable',
-                'string',
-                'max:50',
-            ],
-        ]);
-
-        $product = Product::query()
-            ->where('slug', $validated['product'])
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Tentukan harga berdasarkan tanggal
-        |--------------------------------------------------------------------------
-        */
-        $resolved = $priceResolver->resolve(
-            $product,
-            $validated['date']
-        );
-
-        $unitPrice = $resolved['price'];
-        $quantity = (int) $validated['quantity'];
-
-        $subtotal = $unitPrice * $quantity;
-
-        /*
-        |--------------------------------------------------------------------------
-        | Voucher
-        |--------------------------------------------------------------------------
-        */
-        $discount = null;
-        $discountAmount = 0;
-
-        if (!empty($validated['voucher'])) {
-            $discount = Discount::query()
-                ->where('code', strtoupper(trim($validated['voucher'])))
-                ->where('is_active', true)
-                ->first();
-
-            if ($discount) {
-                $now = now();
-
-                $validDate =
-                    (!$discount->start_at || $now->gte($discount->start_at)) &&
-                    (!$discount->end_at || $now->lte($discount->end_at));
-
-                $validUsage =
-                    $discount->usage_limit === null ||
-                    $discount->usage_count < $discount->usage_limit;
-
-                $validMinimum =
-                    $subtotal >= (float) $discount->min_purchase;
-
-                if ($validDate && $validUsage && $validMinimum) {
-                    if ($discount->type === 'PERCENTAGE') {
-                        $discountAmount =
-                            $subtotal *
-                            ((float) $discount->value / 100);
-
-                        if ($discount->max_discount !== null) {
-                            $discountAmount = min(
-                                $discountAmount,
-                                (float) $discount->max_discount
-                            );
-                        }
-                    } else {
-                        $discountAmount = (float) $discount->value;
-                    }
-
-                    $discountAmount = min(
-                        $discountAmount,
-                        $subtotal
-                    );
-                } else {
-                    $discount = null;
-                }
-            }
-        }
-
-        $total = $subtotal - $discountAmount;
-
-        /*
-        |--------------------------------------------------------------------------
-        | Site Settings
-        |--------------------------------------------------------------------------
-        */
-        $settings = SiteSetting::query()
-            ->where('is_active', true)
-            ->get(['key', 'value'])
-            ->mapWithKeys(function ($setting) {
-                return [
-                    $setting->key => $setting->value,
-                ];
-            })
-            ->toArray();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Kirim data ke React/Inertia
-        |--------------------------------------------------------------------------
-        */
-        return Inertia::render('Public/Checkout', [
-            'product' => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'slug' => $product->slug,
-            ],
-
-            'date' => $resolved['date'],
-
-            'dayType' => $resolved['day_type'],
-
-            'quantity' => $quantity,
-
-            'unitPrice' => $unitPrice,
-
-            'subtotal' => $subtotal,
-
-            'discount' => $discount
-                ? [
-                    'code' => $discount->code,
-                    'name' => $discount->name,
-                    'type' => $discount->type,
-                    'value' => (float) $discount->value,
-                ]
-                : null,
-
-            'discountAmount' => $discountAmount,
-
-            'total' => $total,
-
-            'settings' => $settings,
-        ]);
-    }
-
-    /**
-     * Sementara untuk proses submit checkout.
-     *
-     * Nanti method ini kita lanjutkan menjadi:
-     * Checkout -> Order -> Order Item -> Payment -> Espay QRIS
-     */
-
-
-    public function store(
-        Request $request,
-        PriceResolver $priceResolver
-    ) {
-        $validated = $request->validate([
-            'product' => [
-                'required',
-                'string',
-                'exists:products,slug',
-            ],
 
             'date' => [
                 'required',
@@ -214,24 +45,6 @@ class CheckoutController extends Controller
                 'max:20',
             ],
 
-            'name' => [
-                'required',
-                'string',
-                'max:150',
-            ],
-
-            'email' => [
-                'required',
-                'email',
-                'max:150',
-            ],
-
-            'phone' => [
-                'required',
-                'string',
-                'max:30',
-            ],
-
             'voucher' => [
                 'nullable',
                 'string',
@@ -239,395 +52,261 @@ class CheckoutController extends Controller
             ],
         ]);
 
-        /*
-    |--------------------------------------------------------------------------
-    | Product
-    |--------------------------------------------------------------------------
-    */
-
         $product = Product::query()
-            ->where('slug', $validated['product'])
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        /*
-    |--------------------------------------------------------------------------
-    | Harga berdasarkan tanggal
-    |--------------------------------------------------------------------------
-    */
-
-        $resolved = $priceResolver->resolve(
-            $product,
-            $validated['date']
-        );
-
-        $unitPrice = (float) $resolved['price'];
-
-        $quantity = (int) $validated['quantity'];
-
-        $subtotal = $unitPrice * $quantity;
-
-        /*
-    |--------------------------------------------------------------------------
-    | Voucher
-    |--------------------------------------------------------------------------
-    */
-
-        $discount = null;
-        $discountAmount = 0;
-
-        if (!empty($validated['voucher'])) {
-
-            $discount = Discount::query()
-                ->where('code', strtoupper(trim($validated['voucher'])))
-                ->where('is_active', true)
-                ->first();
-
-            if (!$discount) {
-                return back()
-                    ->withErrors([
-                        'voucher' => 'Voucher tidak valid.',
-                    ])
-                    ->withInput();
-            }
-
-            $now = now();
-
-            // Belum mulai
-            if (
-                $discount->start_at &&
-                $now->lt($discount->start_at)
-            ) {
-                return back()
-                    ->withErrors([
-                        'voucher' => 'Voucher belum dapat digunakan.',
-                    ])
-                    ->withInput();
-            }
-
-            // Sudah berakhir
-            if (
-                $discount->end_at &&
-                $now->gt($discount->end_at)
-            ) {
-                return back()
-                    ->withErrors([
-                        'voucher' => 'Voucher sudah berakhir.',
-                    ])
-                    ->withInput();
-            }
-
-            // Batas penggunaan
-            if (
-                $discount->usage_limit !== null &&
-                $discount->usage_count >= $discount->usage_limit
-            ) {
-                return back()
-                    ->withErrors([
-                        'voucher' => 'Voucher sudah mencapai batas penggunaan.',
-                    ])
-                    ->withInput();
-            }
-
-            // Minimal pembelian
-            if (
-                $subtotal < (float) $discount->min_purchase
-            ) {
-                return back()
-                    ->withErrors([
-                        'voucher' =>
-                        'Minimal pembelian untuk voucher ini adalah Rp ' .
-                            number_format(
-                                (float) $discount->min_purchase,
-                                0,
-                                ',',
-                                '.'
-                            ) .
-                            '.',
-                    ])
-                    ->withInput();
-            }
-
-            /*
-        |--------------------------------------------------------------------------
-        | Hitung discount
-        |--------------------------------------------------------------------------
-        */
-
-            if ($discount->type === 'PERCENTAGE') {
-
-                $discountAmount =
-                    $subtotal *
-                    ((float) $discount->value / 100);
-
-                if ($discount->max_discount !== null) {
-                    $discountAmount = min(
-                        $discountAmount,
-                        (float) $discount->max_discount
-                    );
-                }
-            } else {
-
-                $discountAmount = (float) $discount->value;
-            }
-
-            $discountAmount = min(
-                $discountAmount,
-                $subtotal
-            );
-        }
-
-        /*
-    |--------------------------------------------------------------------------
-    | Total
-    |--------------------------------------------------------------------------
-    */
-
-        $total = $subtotal - $discountAmount;
-
-        /*
-    |--------------------------------------------------------------------------
-    | Buat transaksi
-    |--------------------------------------------------------------------------
-    */
-
-        $order = DB::transaction(function () use (
-            $validated,
-            $product,
-            $resolved,
-            $unitPrice,
-            $quantity,
-            $subtotal,
-            $discount,
-            $discountAmount,
-            $total
-        ) {
-
-            /*
-        |--------------------------------------------------------------------------
-        | Generate nomor order
-        |--------------------------------------------------------------------------
-        */
-
-            do {
-                $orderNumber =
-                    'ORD-' .
-                    now()->format('Ymd') .
-                    '-' .
-                    strtoupper(Str::random(6));
-            } while (
-                Order::where(
-                    'order_number',
-                    $orderNumber
-                )->exists()
-            );
-
-            /*
-        |--------------------------------------------------------------------------
-        | Token aman untuk public
-        |--------------------------------------------------------------------------
-        */
-
-            $orderToken = Str::random(64);
-
-            /*
-        |--------------------------------------------------------------------------
-        | Expired pembayaran
-        |--------------------------------------------------------------------------
-        |
-        | Misalnya customer diberikan waktu 15 menit.
-        |
-        */
-
-            $expiresAt = now()->addMinutes(15);
-
-            /*
-        |--------------------------------------------------------------------------
-        | Create Order
-        |--------------------------------------------------------------------------
-        */
-
-            $order = Order::create([
-                'order_number' => $orderNumber,
-
-                'order_token' => $orderToken,
-
-                'customer_name' => $validated['name'],
-
-                'customer_email' => $validated['email'],
-
-                'customer_phone' => $validated['phone'],
-
-                'subtotal' => $subtotal,
-
-                'discount_code' => $discount?->code,
-
-                'discount_amount' => $discountAmount,
-
-                'total_amount' => $total,
-
-                'currency' => 'IDR',
-
-                'status' => 'PENDING',
-
-                'payment_status' => 'PENDING',
-
-                'expires_at' => $expiresAt,
-            ]);
-
-            /*
-        |--------------------------------------------------------------------------
-        | Create Order Item
-        |--------------------------------------------------------------------------
-        */
-
-            OrderItem::create([
-                'order_id' => $order->id,
-
-                'product_id' => $product->id,
-
-                'product_name' => $product->name,
-
-                'unit_price' => $unitPrice,
-
-                'quantity' => $quantity,
-
-                'visit_date' => $resolved['date'],
-
-                'subtotal' => $subtotal,
-            ]);
-
-            /*
-        |--------------------------------------------------------------------------
-        | Create Payment
-        |--------------------------------------------------------------------------
-        */
-
-            Payment::create([
-                'order_id' => $order->id,
-
-                'payment_number' =>
-                'PAY-' .
-                    now()->format('Ymd') .
-                    '-' .
-                    strtoupper(Str::random(8)),
-
-                'gateway' => 'ESPAY',
-
-                'payment_method' => 'QRIS',
-
-                'payment_channel' => 'QRIS',
-
-                'amount' => $total,
-
-                'currency' => 'IDR',
-
-                'status' => 'PENDING',
-
-                'expired_at' => $expiresAt,
-            ]);
-
-            /*
-        |--------------------------------------------------------------------------
-        | Update penggunaan voucher
-        |--------------------------------------------------------------------------
-        */
-
-
-            return $order;
-        });
-
-        /*
-
-
-
-
-
-
-
-
-
-
-        
-    |--------------------------------------------------------------------------
-    | Redirect ke halaman pembayaran
-    |--------------------------------------------------------------------------
-    */
-
-
-
-
-        $payment = Payment::query()
-            ->where('order_id', $order->id)
-            ->latest('id')
+            ->where(
+                'slug',
+                $validated['product']
+            )
+            ->where(
+                'is_active',
+                true
+            )
             ->firstOrFail();
 
         try {
-            $espay = app(EspayService::class);
+            $pricing =
+                $pricingService->calculate(
+                    product: $product,
+                    date: $validated['date'],
+                    quantity: (int) $validated['quantity'],
+                    voucher: !empty($validated['voucher'])
+                        ? $validated['voucher']
+                        : null,
+                );
+        } catch (\DomainException $e) {
+            return back()->withErrors([
+                'voucher' => $e->getMessage(),
+            ]);
+        }
 
-            $qris = $espay->generateQris($payment);
+        $settings = $this->settings();
+
+        return Inertia::render(
+            'Public/Checkout',
+            [
+                'product' => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'slug' => $product->slug,
+                ],
+
+                'date' =>
+                    $pricing['date'],
+
+                'dayType' =>
+                    $pricing['day_type'],
+
+                'quantity' =>
+                    $pricing['quantity'],
+
+                'unitPrice' =>
+                    $pricing['unit_price'],
+
+                'subtotal' =>
+                    $pricing['subtotal'],
+
+                'discount' =>
+                    $pricing['discount']
+                        ? [
+                            'code' =>
+                                $pricing['discount']->code,
+
+                            'name' =>
+                                $pricing['discount']->name,
+
+                            'type' =>
+                                $pricing['discount']->type,
+
+                            'value' =>
+                                (float)
+                                $pricing['discount']->value,
+                        ]
+                        : null,
+
+                'discountAmount' =>
+                    $pricing['discount_amount'],
+
+                'total' =>
+                    $pricing['total'],
+
+                'settings' => $settings,
+            ]
+        );
+    }
+
+    /**
+     * Membuat Order + Order Item + Payment
+     * kemudian membuat QRIS Espay.
+     */
+    public function store(
+        CheckoutRequest $request,
+        CheckoutPricingService $pricingService,
+        CreateCheckoutAction $createCheckoutAction,
+        EspayService $espayService,
+    ) {
+        $data = CheckoutData::fromRequest(
+            $request
+        );
+
+        $product = Product::query()
+            ->where(
+                'slug',
+                $data->productSlug
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->firstOrFail();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validasi & hitung harga sebelum create transaction
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+            $pricing =
+                $pricingService->calculate(
+                    product: $product,
+                    date: $data->date,
+                    quantity: $data->quantity,
+                    voucher: $data->voucher,
+                );
+        } catch (\DomainException $e) {
+            return back()
+                ->withErrors([
+                    'voucher' =>
+                        $e->getMessage(),
+                ])
+                ->withInput();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create Checkout
+        |--------------------------------------------------------------------------
+        */
+
+        $result =
+            $createCheckoutAction->execute(
+                data: $data,
+                product: $product,
+            );
+
+        $order =
+            $result['order'];
+
+        $payment =
+            $result['payment'];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Generate QRIS
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+            $qris =
+                $espayService->generateQris(
+                    $payment
+                );
 
             $payment->update([
-                'gateway_reference' => $qris['reference_no'],
-                'payment_url' => $qris['qr_url'],
-                'qr_code' => $qris['qr_content'],
+                'gateway_reference' =>
+                    $qris['reference_no'],
+
+                'payment_url' =>
+                    $qris['qr_url'],
+
+                'qr_code' =>
+                    $qris['qr_content'],
+
                 'metadata' => [
-                    'external_id' => $qris['external_id'],
-                    'response_code' => $qris['response_code'],
-                    'response_message' => $qris['response_message'],
+                    'external_id' =>
+                        $qris['external_id'],
+
+                    'response_code' =>
+                        $qris['response_code'],
+
+                    'response_message' =>
+                        $qris['response_message'],
                 ],
             ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Audit QRIS berhasil dibuat
+            |--------------------------------------------------------------------------
+            */
+
+            app(\App\Domain\AuditLogs\Services\AuditLogService::class)
+                ->log(
+                    action: 'UPDATE',
+                    module: 'PAYMENT',
+                    model: $payment,
+                    description:
+                        "QRIS berhasil dibuat untuk payment {$payment->payment_number}",
+                    oldValues: [
+                        'status' =>
+                            'PENDING',
+                    ],
+                    newValues: [
+                        'status' =>
+                            $payment->status,
+
+                        'gateway_reference' =>
+                            $payment->gateway_reference,
+
+                        'payment_method' =>
+                            $payment->payment_method,
+
+                        'amount' =>
+                            $payment->amount,
+                    ],
+                );
         } catch (\Throwable $e) {
-            Log::error('ESPay QRIS generation failed', [
-                'order_number' => $order->order_number,
-                'payment_number' => $payment->payment_number,
-                'error' => $e->getMessage(),
-            ]);
+            Log::error(
+                'ESPay QRIS generation failed',
+                [
+                    'order_number' =>
+                        $order->order_number,
+
+                    'payment_number' =>
+                        $payment->payment_number,
+
+                    'error' =>
+                        $e->getMessage(),
+                ]
+            );
         }
 
-
-
-
-
-
-
-
-
-
-        return redirect()->route('public.payment', [
-            'order' => $order->order_token,
-        ]);
+        return redirect()->route(
+            'public.payment',
+            [
+                'order' =>
+                    $order->order_token,
+            ]
+        );
     }
-    /**
-     * Normalisasi URL image dari SiteSetting.
-     */
-    private function imageSetting(
-        string $key,
-        ?string $value
-    ): ?string {
-        if (!$value) {
-            return null;
-        }
 
-        if (filter_var($value, FILTER_VALIDATE_URL)) {
-            return $value;
-        }
-
-        if (str_starts_with($value, '/')) {
-            return $value;
-        }
-
-        if (str_starts_with($value, 'storage/')) {
-            return '/' . $value;
-        }
-
-        if (
-            str_starts_with($value, 'images/') ||
-            str_starts_with($value, 'assets/')
-        ) {
-            return '/' . $value;
-        }
-
-        return '/storage/' . ltrim($value, '/');
+    private function settings(): array
+    {
+        return SiteSetting::query()
+            ->where(
+                'is_active',
+                true
+            )
+            ->get([
+                'key',
+                'value',
+            ])
+            ->mapWithKeys(
+                fn ($setting) => [
+                    $setting->key =>
+                        $setting->value,
+                ]
+            )
+            ->toArray();
     }
 }

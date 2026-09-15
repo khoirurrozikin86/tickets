@@ -503,7 +503,7 @@
              */
             new QRCode(
                 document.getElementById('ticket-qrcode'), {
-                    text: @json('TKT:' . $ticket->token),
+                    text: @json($ticket->token),
 
                     width: 220,
                     height: 220,

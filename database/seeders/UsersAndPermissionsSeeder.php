@@ -35,6 +35,9 @@ class UsersAndPermissionsSeeder extends Seeder
             'payments' => ['view', 'create', 'update', 'delete', 'cancel'],
             'site-settings' => ['view', 'create', 'update', 'delete'],
             'banners' => ['view', 'create', 'update', 'delete'],
+            'invoices' => ['view', 'create', 'update', 'delete'],
+            'notifications' => ['view', 'create', 'update', 'delete'],
+            'scan' => ['view', 'create', 'update', 'delete'],
 
 
 
@@ -66,6 +69,9 @@ class UsersAndPermissionsSeeder extends Seeder
             'orders.view',
             'site-settings.view',
             'banners.view',
+            'invoices.view',
+            'notifications.view',
+            'scan.view',
         ]);
 
         // 👨‍💼 ADMIN: CRUD penuh semua modul utama
@@ -131,6 +137,24 @@ class UsersAndPermissionsSeeder extends Seeder
             'banners.create',
             'banners.update',
             'banners.delete',
+
+            'invoices.view',
+            'invoices.create',
+            'invoices.update',
+            'invoices.delete',
+
+            'notifications.view',
+            'notifications.create',
+            'notifications.update',
+            'notifications.delete',
+
+            'scan.view',
+            'scan.create',
+            'scan.update',
+            'scan.delete',
+
+
+
 
 
 

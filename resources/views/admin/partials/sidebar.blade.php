@@ -318,9 +318,71 @@
 
                     </div>
 
+
+
+
                 </li>
             @endcan
 
+
+            {{-- ================= SCAN TICKET ================= --}}
+            @can('tickets.view')
+                <li class="nav-item">
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-scan-ticket" role="button"
+                        aria-expanded="{{ request()->routeIs('super.scan.*') ? 'true' : 'false' }}"
+                        aria-controls="menu-scan-ticket">
+
+                        <i class="link-icon" data-feather="maximize"></i>
+
+                        <span class="link-title">
+                            Scan Ticket
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.scan.*') ? 'show' : '' }}" id="menu-scan-ticket">
+
+                        <ul class="nav sub-menu">
+
+                            {{-- Scan Barcode --}}
+                            <li class="nav-item">
+                                <a href="{{ route('super.scan.barcode') }}"
+                                    class="nav-link {{ request()->routeIs('super.scan.barcode') ? 'active' : '' }}">
+
+                                    Scan Barcode
+
+                                </a>
+                            </li>
+
+                            {{-- Camera --}}
+                            <li class="nav-item">
+                                <a href="{{ route('super.scan.camera') }}"
+                                    class="nav-link {{ request()->routeIs('super.scan.camera') ? 'active' : '' }}">
+
+                                    Camera
+
+                                </a>
+                            </li>
+
+                            {{-- Monitoring --}}
+                            <li class="nav-item">
+                                <a href="{{ route('super.scan.monitoring') }}"
+                                    class="nav-link {{ request()->routeIs('super.scan.monitoring') ? 'active' : '' }}">
+
+                                    Monitoring
+
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </li>
+            @endcan
 
 
             @can('orders.view')
@@ -388,6 +450,84 @@
                         </ul>
 
                     </div>
+                </li>
+            @endcan
+
+
+
+
+            @can('invoices.view')
+                <li class="nav-item">
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-invoices" role="button"
+                        aria-expanded="false" aria-controls="menu-invoices">
+
+                        <i class="link-icon" data-feather="file-text"></i>
+
+                        <span class="link-title">
+                            Invoice
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.invoices.*') ? 'show' : '' }}" id="menu-invoices">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.invoices.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.invoices.index') ? 'active' : '' }}">
+                                    Show
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </li>
+            @endcan
+
+
+
+            @can('notifications.view')
+                <li class="nav-item">
+
+                    <a class="nav-link" data-bs-toggle="collapse" href="#menu-notifications" role="button"
+                        aria-expanded="false" aria-controls="menu-notifications">
+
+                        <i class="link-icon" data-feather="bell"></i>
+
+                        <span class="link-title">
+                            Notifications
+                        </span>
+
+                        <i class="link-arrow" data-feather="chevron-down"></i>
+
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('super.notifications.*') ? 'show' : '' }}"
+                        id="menu-notifications">
+
+                        <ul class="nav sub-menu">
+
+                            <li class="nav-item">
+
+                                <a href="{{ route('super.notifications.index') }}"
+                                    class="nav-link {{ request()->routeIs('super.notifications.index') ? 'active' : '' }}">
+                                    Show
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
                 </li>
             @endcan
 

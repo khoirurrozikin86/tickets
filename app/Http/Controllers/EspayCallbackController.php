@@ -2,21 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\AuditLogs\Services\AuditLogService;
 use App\Models\Order;
 use App\Models\Payment;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use App\Domain\Tickets\Actions\GenerateTicketsForOrderAction;
+use App\Domain\Invoices\Actions\CreateInvoiceAction;
+use App\Domain\Notifications\Actions\SendOrderTicketEmailAction;
+use App\Domain\Discounts\Actions\ConsumeDiscountAction;
 
 class EspayCallbackController extends Controller
 {
+    public function __construct(
+        private readonly AuditLogService $auditLogService,
+        private readonly GenerateTicketsForOrderAction $generateTicketsForOrderAction,
+        private readonly CreateInvoiceAction $createInvoiceAction,
+        private readonly SendOrderTicketEmailAction $sendOrderTicketEmailAction,
+        private readonly ConsumeDiscountAction $consumeDiscountAction,
+    ) {}
+
     /**
      * ESPay Inquiry Callback.
-     *
-     * Dipanggil ESPay untuk memastikan transaksi
-     * masih valid sebelum pembayaran QRIS diproses.
      */
     public function inquiry(Request $request): JsonResponse
     {
@@ -27,6 +38,17 @@ class EspayCallbackController extends Controller
         $virtualAccountNo = $data['virtualAccountNo'] ?? null;
 
         if (! $virtualAccountNo) {
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: null,
+                description: 'ESPay inquiry gagal: Virtual Account tidak ditemukan.',
+                newValues: [
+                    'type' => 'INQUIRY',
+                    'reason' => 'VIRTUAL_ACCOUNT_NOT_FOUND',
+                ],
+            );
+
             return $this->errorResponse(
                 '4002402',
                 'Invalid Virtual Account'
@@ -51,15 +73,21 @@ class EspayCallbackController extends Controller
 
         $payment = Payment::query()
             ->whereKey($reference['payment_id'])
-            ->where('order_id', $reference['order_id'])
+            ->where(
+                'order_id',
+                $reference['order_id']
+            )
             ->first();
 
         if (! $order || ! $payment) {
-            Log::warning('ESPay INQUIRY ORDER/PAYMENT NOT FOUND', [
-                'virtual_account_no' => $virtualAccountNo,
-                'order_id' => $reference['order_id'],
-                'payment_id' => $reference['payment_id'],
-            ]);
+            Log::warning(
+                'ESPay INQUIRY ORDER/PAYMENT NOT FOUND',
+                [
+                    'virtual_account_no' => $virtualAccountNo,
+                    'order_id' => $reference['order_id'],
+                    'payment_id' => $reference['payment_id'],
+                ]
+            );
 
             return $this->errorResponse(
                 '4042401',
@@ -68,11 +96,14 @@ class EspayCallbackController extends Controller
         }
 
         if ($payment->status !== 'PENDING') {
-            Log::warning('ESPay INQUIRY PAYMENT NOT PENDING', [
-                'order_number' => $order->order_number,
-                'payment_number' => $payment->payment_number,
-                'payment_status' => $payment->status,
-            ]);
+            Log::warning(
+                'ESPay INQUIRY PAYMENT NOT PENDING',
+                [
+                    'order_number' => $order->order_number,
+                    'payment_number' => $payment->payment_number,
+                    'payment_status' => $payment->status,
+                ]
+            );
 
             return $this->errorResponse(
                 '4002402',
@@ -81,10 +112,13 @@ class EspayCallbackController extends Controller
         }
 
         if ($this->isExpired($order)) {
-            Log::warning('ESPay INQUIRY TRANSACTION EXPIRED', [
-                'order_number' => $order->order_number,
-                'payment_number' => $payment->payment_number,
-            ]);
+            Log::warning(
+                'ESPay INQUIRY TRANSACTION EXPIRED',
+                [
+                    'order_number' => $order->order_number,
+                    'payment_number' => $payment->payment_number,
+                ]
+            );
 
             return $this->errorResponse(
                 '4002402',
@@ -93,7 +127,6 @@ class EspayCallbackController extends Controller
         }
 
         return $this->inquirySuccessResponse(
-            $request,
             $data,
             $order,
             $payment,
@@ -103,16 +136,34 @@ class EspayCallbackController extends Controller
 
     /**
      * ESPay Payment Notification Callback.
-     *
-     * Dipanggil ESPay setelah pembayaran berhasil.
      */
     public function payment(Request $request): JsonResponse
     {
         $data = $request->json()->all();
 
-        $this->logCallback('PAYMENT', $request, $data);
+        $this->logCallback(
+            'PAYMENT',
+            $request,
+            $data
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate payload
+        |--------------------------------------------------------------------------
+        */
 
         if (! is_array($data) || empty($data)) {
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: null,
+                description: 'ESPay payment callback gagal: payload tidak valid.',
+                newValues: [
+                    'reason' => 'INVALID_REQUEST',
+                ],
+            );
+
             return $this->errorResponse(
                 '4002500',
                 'Invalid Request'
@@ -120,10 +171,29 @@ class EspayCallbackController extends Controller
         }
 
         /*
-         * 1. Validasi signature.
-         */
+        |--------------------------------------------------------------------------
+        | Validate signature
+        |--------------------------------------------------------------------------
+        */
+
         if (! $this->verifySignature($request)) {
-            Log::warning('ESPay PAYMENT INVALID SIGNATURE');
+            Log::warning(
+                'ESPay PAYMENT INVALID SIGNATURE'
+            );
+
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: null,
+                description: 'ESPay payment callback ditolak karena signature tidak valid.',
+                newValues: [
+                    'reason' => 'INVALID_SIGNATURE',
+                    'partner_id' =>
+                    $request->header('X-PARTNER-ID'),
+                    'external_id' =>
+                    $request->header('X-EXTERNAL-ID'),
+                ],
+            );
 
             return $this->errorResponse(
                 '4012500',
@@ -132,12 +202,31 @@ class EspayCallbackController extends Controller
         }
 
         /*
-         * 2. Validasi partner.
-         */
+        |--------------------------------------------------------------------------
+        | Validate partner
+        |--------------------------------------------------------------------------
+        */
+
         if (! $this->isValidPartner($request)) {
-            Log::warning('ESPay PAYMENT INVALID PARTNER ID', [
-                'partner_id' => $request->header('X-PARTNER-ID'),
-            ]);
+            Log::warning(
+                'ESPay PAYMENT INVALID PARTNER ID',
+                [
+                    'partner_id' =>
+                    $request->header('X-PARTNER-ID'),
+                ]
+            );
+
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: null,
+                description: 'ESPay payment callback ditolak karena partner ID tidak valid.',
+                newValues: [
+                    'reason' => 'INVALID_PARTNER',
+                    'partner_id' =>
+                    $request->header('X-PARTNER-ID'),
+                ],
+            );
 
             return $this->errorResponse(
                 '4012500',
@@ -146,49 +235,29 @@ class EspayCallbackController extends Controller
         }
 
         /*
-         * 3. Ambil data payment dari ROOT payload.
-         *
-         * Callback ESPay:
-         *
-         * {
-         *   "virtualAccountNo": "...",
-         *   "paymentRequestId": "...",
-         *   "paidAmount": {...},
-         *   "totalAmount": {...},
-         *   "additionalInfo": {
-         *       "transactionStatus": "S"
-         *   }
-         * }
-         */
-        $virtualAccountNo = $data['virtualAccountNo'] ?? null;
+        |--------------------------------------------------------------------------
+        | Extract callback data
+        |--------------------------------------------------------------------------
+        */
 
-        if (! $virtualAccountNo) {
-            return $this->errorResponse(
-                '4002500',
-                'Virtual Account Not Found'
-            );
-        }
+        $virtualAccountNo =
+            $data['virtualAccountNo']
+            ?? null;
 
-        $reference = $this->parseReference($virtualAccountNo);
+        $paymentRequestId =
+            $data['paymentRequestId']
+            ?? null;
 
-        if (! $reference) {
-            Log::warning('ESPay PAYMENT INVALID REFERENCE', [
-                'virtual_account_no' => $virtualAccountNo,
-            ]);
+        $paidAmount =
+            $data['paidAmount']['value']
+            ?? null;
 
-            return $this->errorResponse(
-                '4002500',
-                'Invalid Reference'
-            );
-        }
+        $totalAmount =
+            $data['totalAmount']['value']
+            ?? null;
 
-        $paymentRequestId = $data['paymentRequestId'] ?? null;
-
-        $paidAmount = $data['paidAmount']['value'] ?? null;
-
-        $totalAmount = $data['totalAmount']['value'] ?? null;
-
-        $currency = $data['paidAmount']['currency']
+        $currency =
+            $data['paidAmount']['currency']
             ?? $data['totalAmount']['currency']
             ?? 'IDR';
 
@@ -197,14 +266,105 @@ class EspayCallbackController extends Controller
             ?? null;
 
         /*
-         * 4. Validasi status transaksi.
-         */
+        |--------------------------------------------------------------------------
+        | Validate Virtual Account
+        |--------------------------------------------------------------------------
+        */
+
+        if (! $virtualAccountNo) {
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: null,
+                description: 'ESPay payment gagal: Virtual Account tidak ditemukan.',
+                newValues: [
+                    'reason' => 'VIRTUAL_ACCOUNT_NOT_FOUND',
+                    'payment_request_id' =>
+                    $paymentRequestId,
+                ],
+            );
+
+            return $this->errorResponse(
+                '4002500',
+                'Virtual Account Not Found'
+            );
+        }
+
+        $reference =
+            $this->parseReference(
+                $virtualAccountNo
+            );
+
+        if (! $reference) {
+            Log::warning(
+                'ESPay PAYMENT INVALID REFERENCE',
+                [
+                    'virtual_account_no' =>
+                    $virtualAccountNo,
+                ]
+            );
+
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: null,
+                description: 'ESPay payment gagal: reference Virtual Account tidak valid.',
+                newValues: [
+                    'reason' => 'INVALID_REFERENCE',
+                    'virtual_account_no' =>
+                    $virtualAccountNo,
+                    'payment_request_id' =>
+                    $paymentRequestId,
+                ],
+            );
+
+            return $this->errorResponse(
+                '4002500',
+                'Invalid Reference'
+            );
+        }
+
+        $payment =
+            $this->findPaymentByReference(
+                $reference
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate transaction status
+        |--------------------------------------------------------------------------
+        */
+
         if ($transactionStatus !== 'S') {
-            Log::warning('ESPay PAYMENT NOT SUCCESS', [
-                'virtual_account_no' => $virtualAccountNo,
-                'transaction_status' => $transactionStatus,
-                'trx_id' => $data['trxId'] ?? null,
-            ]);
+            Log::warning(
+                'ESPay PAYMENT NOT SUCCESS',
+                [
+                    'virtual_account_no' =>
+                    $virtualAccountNo,
+                    'transaction_status' =>
+                    $transactionStatus,
+                    'trx_id' =>
+                    $data['trxId'] ?? null,
+                ]
+            );
+
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: $payment,
+                description: 'Pembayaran ESPay tidak berhasil.',
+                newValues: [
+                    'transaction_status' =>
+                    $transactionStatus,
+                    'payment_request_id' =>
+                    $paymentRequestId,
+                    'trx_id' =>
+                    $data['trxId'] ?? null,
+                    'payment_reference' =>
+                    $data['additionalInfo']['paymentRef']
+                        ?? null,
+                ],
+            );
 
             return $this->errorResponse(
                 '4002500',
@@ -213,9 +373,30 @@ class EspayCallbackController extends Controller
         }
 
         /*
-         * 5. Validasi nominal.
-         */
-        if ($paidAmount === null || $totalAmount === null) {
+        |--------------------------------------------------------------------------
+        | Validate amount
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $paidAmount === null ||
+            $totalAmount === null
+        ) {
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: $payment,
+                description: 'Pembayaran ESPay gagal: nominal tidak valid.',
+                newValues: [
+                    'paid_amount' =>
+                    $paidAmount,
+                    'total_amount' =>
+                    $totalAmount,
+                    'payment_request_id' =>
+                    $paymentRequestId,
+                ],
+            );
+
             return $this->errorResponse(
                 '4002500',
                 'Invalid Amount'
@@ -225,14 +406,35 @@ class EspayCallbackController extends Controller
         if (
             abs(
                 (float) $paidAmount -
-                (float) $totalAmount
+                    (float) $totalAmount
             ) > 0.01
         ) {
-            Log::error('ESPay PAYMENT AMOUNT INTERNAL MISMATCH', [
-                'virtual_account_no' => $virtualAccountNo,
-                'paid_amount' => $paidAmount,
-                'total_amount' => $totalAmount,
-            ]);
+            Log::error(
+                'ESPay PAYMENT AMOUNT INTERNAL MISMATCH',
+                [
+                    'virtual_account_no' =>
+                    $virtualAccountNo,
+                    'paid_amount' =>
+                    $paidAmount,
+                    'total_amount' =>
+                    $totalAmount,
+                ]
+            );
+
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: $payment,
+                description: 'Pembayaran ESPay gagal karena nominal callback tidak sesuai.',
+                newValues: [
+                    'paid_amount' =>
+                    $paidAmount,
+                    'total_amount' =>
+                    $totalAmount,
+                    'payment_request_id' =>
+                    $paymentRequestId,
+                ],
+            );
 
             return $this->errorResponse(
                 '4002500',
@@ -240,15 +442,22 @@ class EspayCallbackController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Process successful payment
+        |--------------------------------------------------------------------------
+        */
+
         try {
-            $result = $this->processSuccessfulPayment(
-                reference: $reference,
-                paymentRequestId: $paymentRequestId,
-                paidAmount: $paidAmount,
-                currency: $currency,
-                virtualAccountNo: $virtualAccountNo,
-                callbackPayload: $data
-            );
+            $result =
+                $this->processSuccessfulPayment(
+                    reference: $reference,
+                    paymentRequestId: $paymentRequestId,
+                    paidAmount: $paidAmount,
+                    currency: $currency,
+                    virtualAccountNo: $virtualAccountNo,
+                    callbackPayload: $data
+                );
 
             return $this->paymentSuccessResponse(
                 $result['order'],
@@ -257,20 +466,60 @@ class EspayCallbackController extends Controller
                 $paymentRequestId
             );
         } catch (RuntimeException $e) {
-            Log::error('ESPay PAYMENT PROCESS FAILED', [
-                'virtual_account_no' => $virtualAccountNo,
-                'error' => $e->getMessage(),
-            ]);
+            Log::error(
+                'ESPay PAYMENT PROCESS FAILED',
+                [
+                    'virtual_account_no' =>
+                    $virtualAccountNo,
+                    'error' =>
+                    $e->getMessage(),
+                ]
+            );
+
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: $payment,
+                description: 'Pembayaran ESPay gagal diproses.',
+                newValues: [
+                    'reason' =>
+                    $e->getMessage(),
+                    'payment_request_id' =>
+                    $paymentRequestId,
+                    'trx_id' =>
+                    $data['trxId'] ?? null,
+                ],
+            );
 
             return $this->errorResponse(
                 '4002500',
                 $e->getMessage()
             );
         } catch (\Throwable $e) {
-            Log::error('ESPay PAYMENT CALLBACK ERROR', [
-                'virtual_account_no' => $virtualAccountNo,
-                'error' => $e->getMessage(),
-            ]);
+            Log::error(
+                'ESPay PAYMENT CALLBACK ERROR',
+                [
+                    'virtual_account_no' =>
+                    $virtualAccountNo,
+                    'error' =>
+                    $e->getMessage(),
+                ]
+            );
+
+            $this->auditLog(
+                action: 'UPDATE',
+                module: 'PAYMENT',
+                model: $payment,
+                description: 'ESPay payment callback mengalami internal error.',
+                newValues: [
+                    'reason' =>
+                    $e->getMessage(),
+                    'payment_request_id' =>
+                    $paymentRequestId,
+                    'trx_id' =>
+                    $data['trxId'] ?? null,
+                ],
+            );
 
             return $this->errorResponse(
                 '5002500',
@@ -290,201 +539,442 @@ class EspayCallbackController extends Controller
         string $virtualAccountNo,
         array $callbackPayload
     ): array {
-        return DB::transaction(function () use (
-            $reference,
-            $paymentRequestId,
-            $paidAmount,
-            $currency,
-            $virtualAccountNo,
-            $callbackPayload
-        ) {
-            $order = Order::query()
-                ->lockForUpdate()
-                ->find($reference['order_id']);
+        return DB::transaction(
+            function () use (
+                $reference,
+                $paymentRequestId,
+                $paidAmount,
+                $currency,
+                $virtualAccountNo,
+                $callbackPayload
+            ) {
+                $order = Order::query()
+                    ->lockForUpdate()
+                    ->find(
+                        $reference['order_id']
+                    );
 
-            $payment = Payment::query()
-                ->lockForUpdate()
-                ->whereKey($reference['payment_id'])
-                ->where('order_id', $reference['order_id'])
-                ->first();
+                $payment = Payment::query()
+                    ->lockForUpdate()
+                    ->whereKey(
+                        $reference['payment_id']
+                    )
+                    ->where(
+                        'order_id',
+                        $reference['order_id']
+                    )
+                    ->first();
 
-            if (! $order || ! $payment) {
-                throw new RuntimeException(
-                    'Order atau payment tidak ditemukan.'
-                );
-            }
+                if (! $order || ! $payment) {
+                    throw new RuntimeException(
+                        'Order atau payment tidak ditemukan.'
+                    );
+                }
 
-            /*
-             * Idempotency.
-             *
-             * Jika callback yang sama dikirim ulang
-             * setelah payment sudah PAID, jangan proses ulang.
-             */
-            if ($payment->status === 'PAID') {
-                Log::info('ESPay PAYMENT ALREADY PAID', [
-                    'order_number' => $order->order_number,
-                    'payment_number' => $payment->payment_number,
-                    'payment_request_id' => $paymentRequestId,
-                ]);
+                /*
+                |--------------------------------------------------------------------------
+                | Idempotency
+                |--------------------------------------------------------------------------
+                */
 
-                return [
-                    'order' => $order,
-                    'payment' => $payment,
-                    'already_paid' => true,
-                ];
-            }
+                if ($payment->status === 'PAID') {
+                    Log::info(
+                        'ESPay PAYMENT ALREADY PAID',
+                        [
+                            'order_number' =>
+                            $order->order_number,
+                            'payment_number' =>
+                            $payment->payment_number,
+                            'payment_request_id' =>
+                            $paymentRequestId,
+                        ]
+                    );
 
-            /*
-             * Payment yang sudah dibatalkan/expired
-             * tidak boleh dibayar.
-             */
-            if (
-                in_array(
+                    $this->auditLog(
+                        action: 'UPDATE',
+                        module: 'PAYMENT',
+                        model: $payment,
+                        description: "Callback ESPay diterima kembali untuk payment {$payment->payment_number} yang sudah PAID.",
+                        newValues: [
+                            'status' => 'PAID',
+                            'duplicate_callback' => true,
+                            'payment_request_id' =>
+                            $paymentRequestId,
+                        ],
+                    );
+
+                    return [
+                        'order' =>
+                        $order,
+                        'payment' =>
+                        $payment,
+                        'already_paid' =>
+                        true,
+                    ];
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Cancelled / expired
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    in_array(
+                        $payment->status,
+                        [
+                            'CANCELLED',
+                            'EXPIRED',
+                        ],
+                        true
+                    )
+                ) {
+                    $this->auditLog(
+                        action: 'UPDATE',
+                        module: 'PAYMENT',
+                        model: $payment,
+                        description: "Pembayaran ditolak karena payment {$payment->payment_number} berstatus {$payment->status}.",
+                        newValues: [
+                            'status' =>
+                            $payment->status,
+                            'payment_request_id' =>
+                            $paymentRequestId,
+                        ],
+                    );
+
+                    throw new RuntimeException(
+                        'Payment sudah tidak dapat diproses.'
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Validate amount
+                |--------------------------------------------------------------------------
+                */
+
+                $expectedAmount =
+                    round(
+                        (float) $payment->amount,
+                        2
+                    );
+
+                $receivedAmount =
+                    round(
+                        (float) $paidAmount,
+                        2
+                    );
+
+                if (
+                    abs(
+                        $receivedAmount -
+                            $expectedAmount
+                    ) > 0.01
+                ) {
+                    Log::error(
+                        'ESPay PAYMENT AMOUNT MISMATCH',
+                        [
+                            'order_number' =>
+                            $order->order_number,
+                            'payment_number' =>
+                            $payment->payment_number,
+                            'expected_amount' =>
+                            $expectedAmount,
+                            'received_amount' =>
+                            $receivedAmount,
+                        ]
+                    );
+
+                    $this->auditLog(
+                        action: 'UPDATE',
+                        module: 'PAYMENT',
+                        model: $payment,
+                        description: "Pembayaran {$payment->payment_number} gagal karena nominal tidak sesuai.",
+                        newValues: [
+                            'expected_amount' =>
+                            $expectedAmount,
+                            'received_amount' =>
+                            $receivedAmount,
+                        ],
+                    );
+
+                    throw new RuntimeException(
+                        'Payment amount tidak sesuai.'
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Validate currency
+                |--------------------------------------------------------------------------
+                */
+
+                $expectedCurrency =
+                    strtoupper(
+                        $order->currency ?? 'IDR'
+                    );
+
+                if (
+                    strtoupper($currency) !==
+                    $expectedCurrency
+                ) {
+                    Log::error(
+                        'ESPay PAYMENT CURRENCY MISMATCH',
+                        [
+                            'order_number' =>
+                            $order->order_number,
+                            'payment_number' =>
+                            $payment->payment_number,
+                            'expected_currency' =>
+                            $expectedCurrency,
+                            'received_currency' =>
+                            $currency,
+                        ]
+                    );
+
+                    $this->auditLog(
+                        action: 'UPDATE',
+                        module: 'PAYMENT',
+                        model: $payment,
+                        description: "Pembayaran {$payment->payment_number} gagal karena currency tidak sesuai.",
+                        newValues: [
+                            'expected_currency' =>
+                            $expectedCurrency,
+                            'received_currency' =>
+                            $currency,
+                        ],
+                    );
+
+                    throw new RuntimeException(
+                        'Currency payment tidak sesuai.'
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Save payment
+                |--------------------------------------------------------------------------
+                */
+
+                $oldPaymentValues = [
+                    'status' =>
                     $payment->status,
-                    ['CANCELLED', 'EXPIRED'],
-                    true
-                )
-            ) {
-                throw new RuntimeException(
-                    'Payment sudah tidak dapat diproses.'
-                );
-            }
+                    'paid_at' =>
+                    $payment->paid_at,
+                    'amount' =>
+                    $payment->amount,
+                ];
 
-            /*
-             * Validasi amount terhadap database.
-             */
-            $expectedAmount = round(
-                (float) $payment->amount,
-                2
-            );
+                $paidAt = now();
 
-            $receivedAmount = round(
-                (float) $paidAmount,
-                2
-            );
+                $payment->update([
+                    'status' =>
+                    'PAID',
 
-            if (
-                abs(
-                    $receivedAmount -
-                    $expectedAmount
-                ) > 0.01
-            ) {
-                Log::error('ESPay PAYMENT AMOUNT MISMATCH', [
-                    'order_number' => $order->order_number,
-                    'payment_number' => $payment->payment_number,
-                    'expected_amount' => $expectedAmount,
-                    'received_amount' => $receivedAmount,
-                ]);
+                    'paid_at' =>
+                    $paidAt,
 
-                throw new RuntimeException(
-                    'Payment amount tidak sesuai.'
-                );
-            }
-
-            /*
-             * Validasi currency.
-             */
-            $expectedCurrency =
-                strtoupper(
-                    $order->currency ?? 'IDR'
-                );
-
-            if (
-                strtoupper($currency) !==
-                $expectedCurrency
-            ) {
-                Log::error('ESPay PAYMENT CURRENCY MISMATCH', [
-                    'order_number' => $order->order_number,
-                    'expected_currency' => $expectedCurrency,
-                    'received_currency' => $currency,
-                ]);
-
-                throw new RuntimeException(
-                    'Currency payment tidak sesuai.'
-                );
-            }
-
-            $paidAt = now();
-
-            /*
-             * Update payment.
-             */
-            $payment->update([
-                'status' => 'PAID',
-
-                'paid_at' => $paidAt,
-
-                'gateway_transaction_id' =>
+                    'gateway_transaction_id' =>
                     $paymentRequestId,
 
-                'callback_payload' =>
+                    'callback_payload' =>
                     $callbackPayload,
 
-                'metadata' => array_merge(
-                    $payment->metadata ?? [],
-                    [
-                        'payment_request_id' =>
+                    'metadata' =>
+                    array_merge(
+                        $payment->metadata ?? [],
+                        [
+                            'payment_request_id' =>
                             $paymentRequestId,
 
-                        'virtual_account_no' =>
+                            'virtual_account_no' =>
                             $virtualAccountNo,
 
-                        'trx_id' =>
+                            'trx_id' =>
                             $callbackPayload['trxId']
-                            ?? null,
+                                ?? null,
 
-                        'payment_reference' =>
+                            'payment_reference' =>
                             $callbackPayload['additionalInfo']['paymentRef']
-                            ?? null,
+                                ?? null,
 
-                        'rrn' =>
+                            'rrn' =>
                             $callbackPayload['additionalInfo']['rrn']
-                            ?? null,
+                                ?? null,
 
-                        'approval_code' =>
+                            'approval_code' =>
                             $callbackPayload['additionalInfo']['approvalCode']
-                            ?? null,
+                                ?? null,
 
-                        'transaction_status' =>
+                            'transaction_status' =>
                             $callbackPayload['additionalInfo']['transactionStatus']
-                            ?? null,
+                                ?? null,
 
-                        'currency' =>
+                            'currency' =>
                             $currency,
 
-                        'callback_received_at' =>
+                            'callback_received_at' =>
                             $paidAt->toIso8601String(),
+                        ]
+                    ),
+                ]);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Save order
+                |--------------------------------------------------------------------------
+                */
+
+                $oldOrderValues = [
+                    'status' =>
+                    $order->status,
+                    'payment_status' =>
+                    $order->payment_status,
+                    'paid_at' =>
+                    $order->paid_at,
+                    'completed_at' =>
+                    $order->completed_at,
+                ];
+
+                $order->update([
+                    'status' =>
+                    'PAID',
+
+                    'payment_status' =>
+                    'PAID',
+
+                    'paid_at' =>
+                    $paidAt,
+
+                    'completed_at' =>
+                    $paidAt,
+                ]);
+
+
+
+
+                // Generate ticket
+                $tickets = $this->generateTicketsForOrderAction->execute($order);
+
+                // Generate invoice
+                $this->createInvoiceAction->execute($order);
+
+                // Generate email   
+                $this->sendOrderTicketEmailAction->execute($order);
+
+
+                /*
+|--------------------------------------------------------------------------
+| Consume Discount
+|--------------------------------------------------------------------------
+*/
+
+                $this->consumeDiscountAction->execute($order);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Audit Payment SUCCESS
+                |--------------------------------------------------------------------------
+                */
+
+                $this->auditLog(
+                    action: 'UPDATE',
+                    module: 'PAYMENT',
+                    model: $payment,
+                    description: "Pembayaran {$payment->payment_number} berhasil melalui ESPay.",
+                    oldValues: $oldPaymentValues,
+                    newValues: [
+                        'status' =>
+                        'PAID',
+                        'amount' =>
+                        $expectedAmount,
+                        'currency' =>
+                        $currency,
+                        'gateway_transaction_id' =>
+                        $paymentRequestId,
+                        'trx_id' =>
+                        $callbackPayload['trxId']
+                            ?? null,
+                        'payment_reference' =>
+                        $callbackPayload['additionalInfo']['paymentRef']
+                            ?? null,
+                        'rrn' =>
+                        $callbackPayload['additionalInfo']['rrn']
+                            ?? null,
+                        'approval_code' =>
+                        $callbackPayload['additionalInfo']['approvalCode']
+                            ?? null,
+                    ],
+                );
+
+                /*
+                |--------------------------------------------------------------------------
+                | Audit Order SUCCESS
+                |--------------------------------------------------------------------------
+                */
+
+                $this->auditLog(
+                    action: 'UPDATE',
+                    module: 'ORDER',
+                    model: $order,
+                    description: "Order {$order->order_number} berhasil dibayar melalui ESPay.",
+                    oldValues: $oldOrderValues,
+                    newValues: [
+                        'status' =>
+                        'PAID',
+                        'payment_status' =>
+                        'PAID',
+                        'paid_at' =>
+                        $paidAt,
+                        'completed_at' =>
+                        $paidAt,
+                    ],
+                );
+
+                Log::info(
+                    'ESPay PAYMENT SUCCESS',
+                    [
+                        'order_number' =>
+                        $order->order_number,
+                        'payment_number' =>
+                        $payment->payment_number,
+                        'amount' =>
+                        $expectedAmount,
+                        'payment_request_id' =>
+                        $paymentRequestId,
+                        'trx_id' =>
+                        $callbackPayload['trxId']
+                            ?? null,
                     ]
-                ),
-            ]);
+                );
 
-            /*
-             * Update order.
-             */
-            $order->update([
-                'status' => 'PAID',
+                return [
+                    'order' =>
+                    $order,
+                    'payment' =>
+                    $payment->fresh(),
+                    'already_paid' =>
+                    false,
+                ];
+            }
+        );
+    }
 
-                'payment_status' => 'PAID',
-
-                'paid_at' => $paidAt,
-
-                'completed_at' => $paidAt,
-            ]);
-
-            Log::info('ESPay PAYMENT SUCCESS', [
-                'order_number' => $order->order_number,
-                'payment_number' => $payment->payment_number,
-                'amount' => $expectedAmount,
-                'payment_request_id' => $paymentRequestId,
-                'trx_id' => $callbackPayload['trxId'] ?? null,
-            ]);
-
-            return [
-                'order' => $order,
-                'payment' => $payment->fresh(),
-                'already_paid' => false,
-            ];
-        });
+    /**
+     * Find payment from ESPay reference.
+     */
+    private function findPaymentByReference(
+        array $reference
+    ): ?Payment {
+        return Payment::query()
+            ->whereKey(
+                $reference['payment_id']
+            )
+            ->where(
+                'order_id',
+                $reference['order_id']
+            )
+            ->first();
     }
 
     /**
@@ -493,10 +983,16 @@ class EspayCallbackController extends Controller
     private function verifySignature(
         Request $request
     ): bool {
-        $signature = $request->header('X-SIGNATURE');
-        $timestamp = $request->header('X-TIMESTAMP');
+        $signature =
+            $request->header('X-SIGNATURE');
 
-        if (! $signature || ! $timestamp) {
+        $timestamp =
+            $request->header('X-TIMESTAMP');
+
+        if (
+            ! $signature ||
+            ! $timestamp
+        ) {
             Log::warning(
                 'ESPay PAYMENT SIGNATURE HEADER MISSING'
             );
@@ -504,17 +1000,8 @@ class EspayCallbackController extends Controller
             return false;
         }
 
-        /*
-         * WAJIB raw body.
-         *
-         * Jangan menggunakan:
-         *
-         * json_encode($request->json()->all())
-         *
-         * karena hasil serialisasi dapat berbeda dari
-         * body yang ditandatangani ESPay.
-         */
-        $rawBody = $request->getContent();
+        $rawBody =
+            $request->getContent();
 
         if ($rawBody === '') {
             Log::warning(
@@ -524,67 +1011,85 @@ class EspayCallbackController extends Controller
             return false;
         }
 
-        $bodyHash = strtolower(
-            hash('sha256', $rawBody)
-        );
+        $bodyHash =
+            strtolower(
+                hash(
+                    'sha256',
+                    $rawBody
+                )
+            );
 
-        /*
-         * Relative URL harus sama persis dengan
-         * endpoint yang didaftarkan di ESPay.
-         */
-        $relativeUrl = '/api/espay/payment';
+        $relativeUrl =
+            '/api/espay/payment';
 
-        $stringToSign = sprintf(
-            'POST:%s:%s:%s',
-            $relativeUrl,
-            $bodyHash,
-            $timestamp
-        );
+        $stringToSign =
+            sprintf(
+                'POST:%s:%s:%s',
+                $relativeUrl,
+                $bodyHash,
+                $timestamp
+            );
 
-        $publicKeyPath = config(
-            'espay.public_key_path',
-            'storage/app/private/espay/public.key'
-        );
+        $publicKeyPath =
+            config(
+                'espay.public_key_path',
+                'storage/app/private/espay/public.key'
+            );
 
-        /*
-         * Jika path relatif, ubah menjadi absolute path.
-         */
-        if (! str_starts_with($publicKeyPath, '/')) {
-            $publicKeyPath = base_path($publicKeyPath);
+        if (
+            ! str_starts_with(
+                $publicKeyPath,
+                '/'
+            )
+        ) {
+            $publicKeyPath =
+                base_path(
+                    $publicKeyPath
+                );
         }
 
-        if (! is_file($publicKeyPath)) {
+        if (
+            ! is_file(
+                $publicKeyPath
+            )
+        ) {
             Log::error(
                 'ESPay PAYMENT PUBLIC KEY NOT FOUND',
                 [
-                    'path' => $publicKeyPath,
+                    'path' =>
+                    $publicKeyPath,
                 ]
             );
 
             return false;
         }
 
-        $publicKey = file_get_contents(
-            $publicKeyPath
-        );
+        $publicKey =
+            file_get_contents(
+                $publicKeyPath
+            );
 
         if ($publicKey === false) {
             Log::error(
                 'ESPay PAYMENT PUBLIC KEY READ FAILED',
                 [
-                    'path' => $publicKeyPath,
+                    'path' =>
+                    $publicKeyPath,
                 ]
             );
 
             return false;
         }
 
-        $decodedSignature = base64_decode(
-            $signature,
-            true
-        );
+        $decodedSignature =
+            base64_decode(
+                $signature,
+                true
+            );
 
-        if ($decodedSignature === false) {
+        if (
+            $decodedSignature === false
+        ) {
             Log::warning(
                 'ESPay PAYMENT SIGNATURE BASE64 INVALID'
             );
@@ -592,53 +1097,29 @@ class EspayCallbackController extends Controller
             return false;
         }
 
+        $result =
+            openssl_verify(
+                $stringToSign,
+                $decodedSignature,
+                $publicKey,
+                OPENSSL_ALGO_SHA256
+            );
 
-        Log::info('ESPay PAYMENT SIGNATURE HEADER', [
-    'signature' => $signature,
-    'signature_length' => strlen($signature),
-    'timestamp' => $timestamp,
-]);
-
-
-
-
-
-        $result = openssl_verify(
-            $stringToSign,
-            $decodedSignature,
-            $publicKey,
-            OPENSSL_ALGO_SHA256
-        );
-
-
-
-        
-
-        /*
-         * Untuk sementara log data penting signature.
-         *
-         * Jangan log signature/body lengkap di production
-         * setelah masalah selesai.
-         */
         Log::info(
             'ESPay PAYMENT SIGNATURE VERIFY',
             [
-                'result' => $result,
-
-                'timestamp' => $timestamp,
-
-                'relative_url' => $relativeUrl,
-
-                'body_hash' => $bodyHash,
-
+                'result' =>
+                $result,
+                'timestamp' =>
+                $timestamp,
+                'relative_url' =>
+                $relativeUrl,
+                'body_hash' =>
+                $bodyHash,
                 'raw_body_length' =>
-                    strlen($rawBody),
-
-                'string_to_sign' =>
-                    $stringToSign,
-
+                strlen($rawBody),
                 'public_key_path' =>
-                    $publicKeyPath,
+                $publicKeyPath,
             ]
         );
 
@@ -652,12 +1133,19 @@ class EspayCallbackController extends Controller
         Request $request
     ): bool {
         $partnerId =
-            $request->header('X-PARTNER-ID');
+            $request->header(
+                'X-PARTNER-ID'
+            );
 
         $merchantCode =
-            config('espay.merchant_code');
+            config(
+                'espay.merchant_code'
+            );
 
-        if (! $partnerId || ! $merchantCode) {
+        if (
+            ! $partnerId ||
+            ! $merchantCode
+        ) {
             return false;
         }
 
@@ -668,11 +1156,7 @@ class EspayCallbackController extends Controller
     }
 
     /**
-     * Parse virtual account/reference.
-     *
-     * Example:
-     *
-     * DS19P19
+     * Parse ESPay virtual account/reference.
      */
     private function parseReference(
         string $virtualAccountNo
@@ -688,69 +1172,79 @@ class EspayCallbackController extends Controller
         }
 
         return [
-            'order_id' => (int) $matches[1],
-            'payment_id' => (int) $matches[2],
+            'order_id' =>
+            (int) $matches[1],
+
+            'payment_id' =>
+            (int) $matches[2],
         ];
     }
 
     /**
      * Check order expiration.
      */
-    private function isExpired(Order $order): bool
-    {
+    private function isExpired(
+        Order $order
+    ): bool {
         return $order->expires_at !== null
             && $order->expires_at->isPast();
     }
 
     /**
-     * Build Inquiry success response.
+     * Inquiry success response.
      */
     private function inquirySuccessResponse(
-        Request $request,
         array $data,
         Order $order,
         Payment $payment,
         string $virtualAccountNo
     ): JsonResponse {
         $partnerServiceId =
-            $data['partnerServiceId'] ?? ' Espay';
+            $data['partnerServiceId']
+            ?? ' Espay';
 
         $customerNo =
             $data['customerNo']
-            ?? config('espay.merchant_code');
+            ?? config(
+                'espay.merchant_code'
+            );
 
         $inquiryRequestId =
-            $data['inquiryRequestId'] ?? null;
+            $data['inquiryRequestId']
+            ?? null;
 
         return response()->json([
-            'responseCode' => '2002400',
+            'responseCode' =>
+            '2002400',
 
-            'responseMessage' => 'Success',
+            'responseMessage' =>
+            'Success',
 
             'virtualAccountData' => [
                 'partnerServiceId' =>
-                    $partnerServiceId,
+                $partnerServiceId,
 
                 'customerNo' =>
-                    $customerNo,
+                $customerNo,
 
                 'virtualAccountNo' =>
-                    $virtualAccountNo,
+                $virtualAccountNo,
 
                 'virtualAccountName' =>
-                    $order->customer_name,
+                $order->customer_name,
 
                 'virtualAccountEmail' =>
-                    $order->customer_email,
+                $order->customer_email,
 
                 'virtualAccountPhone' =>
-                    $order->customer_phone,
+                $order->customer_phone,
 
                 'inquiryRequestId' =>
-                    $inquiryRequestId,
+                $inquiryRequestId,
 
                 'totalAmount' => [
-                    'value' => number_format(
+                    'value' =>
+                    number_format(
                         (float) $payment->amount,
                         2,
                         '.',
@@ -758,17 +1252,17 @@ class EspayCallbackController extends Controller
                     ),
 
                     'currency' =>
-                        $order->currency ?? 'IDR',
+                    $order->currency ?? 'IDR',
                 ],
 
                 'billDetails' => [
                     [
                         'billDescription' => [
                             'english' =>
-                                'Dusun Semilir Ticket',
+                            'Dusun Semilir Ticket',
 
                             'indonesia' =>
-                                'Tiket Dusun Semilir',
+                            'Tiket Dusun Semilir',
                         ],
                     ],
                 ],
@@ -776,14 +1270,16 @@ class EspayCallbackController extends Controller
 
             'additionalInfo' => [
                 'transactionDate' =>
-                    now('Asia/Jakarta')
-                        ->format('Y-m-d\TH:i:sP'),
+                now('Asia/Jakarta')
+                    ->format(
+                        'Y-m-d\TH:i:sP'
+                    ),
             ],
         ]);
     }
 
     /**
-     * Build Payment success response.
+     * Payment success response.
      */
     private function paymentSuccessResponse(
         Order $order,
@@ -792,28 +1288,33 @@ class EspayCallbackController extends Controller
         ?string $paymentRequestId
     ): JsonResponse {
         return response()->json([
-            'responseCode' => '2002500',
+            'responseCode' =>
+            '2002500',
 
-            'responseMessage' => 'Success',
+            'responseMessage' =>
+            'Success',
 
             'virtualAccountData' => [
                 'partnerServiceId' =>
-                    ' Espay',
+                ' Espay',
 
                 'customerNo' =>
-                    config('espay.merchant_code'),
+                config(
+                    'espay.merchant_code'
+                ),
 
                 'virtualAccountNo' =>
-                    $virtualAccountNo,
+                $virtualAccountNo,
 
                 'virtualAccountName' =>
-                    $order->customer_name,
+                $order->customer_name,
 
                 'paymentRequestId' =>
-                    $paymentRequestId,
+                $paymentRequestId,
 
                 'totalAmount' => [
-                    'value' => number_format(
+                    'value' =>
+                    number_format(
                         (float) $payment->amount,
                         2,
                         '.',
@@ -821,17 +1322,17 @@ class EspayCallbackController extends Controller
                     ),
 
                     'currency' =>
-                        $order->currency ?? 'IDR',
+                    $order->currency ?? 'IDR',
                 ],
 
                 'billDetails' => [
                     [
                         'billDescription' => [
                             'english' =>
-                                'Dusun Semilir Ticket',
+                            'Dusun Semilir Ticket',
 
                             'indonesia' =>
-                                'Tiket Dusun Semilir',
+                            'Tiket Dusun Semilir',
                         ],
                     ],
                 ],
@@ -851,33 +1352,83 @@ class EspayCallbackController extends Controller
             "ESPay {$type} RECEIVED",
             [
                 'ip' =>
-                    $request->ip(),
+                $request->ip(),
 
                 'method' =>
-                    $request->method(),
+                $request->method(),
 
                 'content_type' =>
-                    $request->header('Content-Type'),
+                $request->header(
+                    'Content-Type'
+                ),
 
                 'partner_id' =>
-                    $request->header('X-PARTNER-ID'),
+                $request->header(
+                    'X-PARTNER-ID'
+                ),
 
                 'external_id' =>
-                    $request->header('X-EXTERNAL-ID'),
+                $request->header(
+                    'X-EXTERNAL-ID'
+                ),
 
                 'channel_id' =>
-                    $request->header('CHANNEL-ID'),
+                $request->header(
+                    'CHANNEL-ID'
+                ),
 
                 'timestamp' =>
-                    $request->header('X-TIMESTAMP'),
+                $request->header(
+                    'X-TIMESTAMP'
+                ),
 
                 'body' =>
-                    $request->getContent(),
+                $request->getContent(),
 
                 'data' =>
-                    $data,
+                $data,
             ]
         );
+    }
+
+    /**
+     * Write Audit Trail safely.
+     *
+     * Audit failure tidak boleh membuat callback
+     * ESPay menjadi gagal.
+     */
+    private function auditLog(
+        string $action,
+        string $module,
+        ?Model $model,
+        string $description,
+        ?array $oldValues = null,
+        ?array $newValues = null,
+    ): void {
+        try {
+            $this->auditLogService->log(
+                action: $action,
+                module: $module,
+                model: $model,
+                description: $description,
+                oldValues: $oldValues,
+                newValues: $newValues,
+            );
+        } catch (\Throwable $e) {
+            Log::error(
+                'ESPay AUDIT LOG FAILED',
+                [
+                    'action' =>
+                    $action,
+                    'module' =>
+                    $module,
+                    'description' =>
+                    $description,
+                    'error' =>
+                    $e->getMessage(),
+                ]
+            );
+        }
     }
 
     /**
@@ -888,8 +1439,11 @@ class EspayCallbackController extends Controller
         string $message
     ): JsonResponse {
         return response()->json([
-            'responseCode' => $code,
-            'responseMessage' => $message,
+            'responseCode' =>
+            $code,
+
+            'responseMessage' =>
+            $message,
         ]);
     }
 }

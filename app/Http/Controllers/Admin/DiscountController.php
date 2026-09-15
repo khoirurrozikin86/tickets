@@ -99,6 +99,24 @@ class DiscountController extends Controller
             ->addColumn('actions', function (Discount $discount) {
 
                 $actions = [
+
+                    // =========================
+                    // USAGE HISTORY
+                    // =========================
+                    [
+                        'type' => 'link',
+                        'label' => 'Usage History',
+                        'icon' => 'bar-chart-2',
+
+                        'url' => route(
+                            'super.discounts.usages',
+                            $discount->getRouteKey()
+                        ),
+                    ],
+
+                    // =========================
+                    // EDIT
+                    // =========================
                     [
                         'type' => 'edit',
                         'label' => 'Edit',
@@ -124,14 +142,20 @@ class DiscountController extends Controller
                         ],
                     ],
 
+                    // =========================
+                    // DELETE
+                    // =========================
                     [
                         'type' => 'delete',
+
                         'url' => route(
                             'super.discounts.destroy',
                             $discount->getRouteKey()
                         ),
+
                         'label' => 'Delete',
                         'icon' => 'trash-2',
+
                         'confirm' =>
                         "Delete discount {$discount->code} ?",
                     ],

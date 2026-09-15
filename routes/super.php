@@ -15,6 +15,10 @@ use App\Http\Controllers\Admin\{
     PaymentController,
     SiteSettingController,
     BannerController,
+    InvoiceController,
+    NotificationController,
+    DiscountUsageController,
+    ScanController,
 };
 
 Route::middleware(['auth'])
@@ -234,6 +238,16 @@ Route::middleware(['auth'])
                 ])
                     ->middleware('permission:discounts.delete')
                     ->name('destroy');
+
+
+
+
+                Route::get('/{discount}/usages', [
+                    DiscountUsageController::class,
+                    'index'
+                ])
+                    ->middleware('permission:discounts.view')
+                    ->name('usages');
             });
 
 
@@ -286,6 +300,10 @@ Route::middleware(['auth'])
                     ->middleware('permission:tickets.view')
                     ->name('export');
 
+
+                Route::get('tickets/{ticket}/pdf', [TicketController::class, 'pdf'])
+                    ->name('pdf');
+
                 // Detail ticket
                 Route::get('/{ticket}', [TicketController::class, 'show'])
                     ->middleware('permission:tickets.view')
@@ -316,6 +334,11 @@ Route::middleware(['auth'])
                 Route::get('/export', [OrderController::class, 'export'])
                     ->middleware('permission:orders.view')
                     ->name('export');
+
+                Route::get(
+                    '{order}/tickets/pdf',
+                    [OrderController::class, 'ticketsPdf']
+                )->name('tickets.pdf');
 
                 Route::get('/{order}', [OrderController::class, 'show'])
                     ->middleware('permission:orders.view')
@@ -396,5 +419,119 @@ Route::middleware(['auth'])
                 Route::delete('/{banner}', [BannerController::class, 'destroy'])
                     ->middleware('permission:banners.delete')
                     ->name('destroy');
+            });
+
+
+
+
+
+
+
+
+
+
+
+        /*
+|--------------------------------------------------------------------------
+| INVOICES
+|--------------------------------------------------------------------------
+*/
+
+        Route::prefix('invoices')
+            ->name('invoices.')
+            ->group(function () {
+
+                // VIEW
+                Route::middleware('permission:invoices.view')
+                    ->get(
+                        '/',
+                        [InvoiceController::class, 'index']
+                    )
+                    ->name('index');
+
+                // DATATABLE
+                Route::middleware('permission:invoices.view')
+                    ->get(
+                        '/dt',
+                        [InvoiceController::class, 'dt']
+                    )
+                    ->name('dt');
+
+
+                Route::get('invoices/export', [InvoiceController::class, 'export'])
+                    ->name('export');
+
+                Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])
+                    ->name('pdf');
+
+                // DETAIL
+                Route::middleware('permission:invoices.view')
+                    ->get(
+                        '/{invoice}',
+                        [InvoiceController::class, 'show']
+                    )
+                    ->name('show');
+            });
+
+
+
+
+        Route::prefix('notifications')
+            ->name('notifications.')
+            ->group(function () {
+
+                Route::get('/', [
+                    NotificationController::class,
+                    'index'
+                ])
+                    ->middleware('permission:notifications.view')
+                    ->name('index');
+
+                Route::get('/dt', [
+                    NotificationController::class,
+                    'dt'
+                ])
+                    ->middleware('permission:notifications.view')
+                    ->name('dt');
+
+
+
+                Route::get('/{notification}', [
+                    NotificationController::class,
+                    'show'
+                ])
+                    ->middleware('permission:notifications.view')
+                    ->name('show');
+            });
+
+        Route::prefix('scan')
+            ->name('scan.')
+            ->group(function () {
+
+                Route::get('/barcode', [ScanController::class, 'barcode'])
+                    ->middleware('permission:tickets.view')
+                    ->name('barcode');
+
+                Route::get('/camera', [ScanController::class, 'camera'])
+                    ->middleware('permission:tickets.view')
+                    ->name('camera');
+
+                Route::post('/', [ScanController::class, 'scan'])
+                    ->middleware('permission:tickets.view')
+                    ->name('scan');
+
+                Route::get('/monitoring/export', [ScanController::class, 'export'])
+                    ->middleware('permission:tickets.view')
+                    ->name('monitoring.export');
+
+
+
+                Route::get('/monitoring', [ScanController::class, 'monitoring'])
+                    ->middleware('permission:tickets.view')
+                    ->name('monitoring');
+
+                Route::get('/monitoring/dt', [ScanController::class, 'dt'])
+                    ->middleware('permission:tickets.view')
+                    ->name('monitoring.dt');
             });
     });

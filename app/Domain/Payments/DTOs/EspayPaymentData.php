@@ -5,13 +5,17 @@ namespace App\Domain\Payments\DTOs;
 final class EspayPaymentData
 {
     public function __construct(
-        public readonly string $partnerReferenceNo,
-        public readonly ?string $referenceNo = null,
-        public readonly ?string $merchantId = null,
-        public readonly ?string $amount = null,
-        public readonly ?string $currency = null,
-        public readonly ?string $transactionStatus = null,
-        public readonly array $payload = [],
+        public readonly string $virtualAccountNo,
+        public readonly ?string $paymentRequestId,
+        public readonly ?string $paidAmount,
+        public readonly ?string $totalAmount,
+        public readonly string $currency,
+        public readonly ?string $transactionStatus,
+        public readonly ?string $paymentRef,
+        public readonly ?string $rrn,
+        public readonly ?string $approvalCode,
+        public readonly ?string $trxId,
+        public readonly array $payload,
     ) {}
 
     public static function fromArray(array $data): self
@@ -19,30 +23,56 @@ final class EspayPaymentData
         $additionalInfo = $data['additionalInfo'] ?? [];
 
         return new self(
-            partnerReferenceNo: (string) (
-                $data['partnerReferenceNo']
-                ?? $data['originalPartnerReferenceNo']
-                ?? ''
+            virtualAccountNo: (string) (
+                $data['virtualAccountNo'] ?? ''
             ),
-            referenceNo: isset($data['referenceNo'])
-                ? (string) $data['referenceNo']
-                : (
-                    isset($additionalInfo['referenceNo'])
-                    ? (string) $additionalInfo['referenceNo']
-                    : null
-                ),
-            merchantId: isset($data['merchantId'])
-                ? (string) $data['merchantId']
-                : null,
-            amount: isset($data['amount']['value'])
-                ? (string) $data['amount']['value']
-                : null,
-            currency: isset($data['amount']['currency'])
-                ? (string) $data['amount']['currency']
-                : null,
-            transactionStatus: isset($data['transactionStatus'])
-                ? (string) $data['transactionStatus']
-                : null,
+
+            paymentRequestId:
+                isset($data['paymentRequestId'])
+                    ? (string) $data['paymentRequestId']
+                    : null,
+
+            paidAmount:
+                isset($data['paidAmount']['value'])
+                    ? (string) $data['paidAmount']['value']
+                    : null,
+
+            totalAmount:
+                isset($data['totalAmount']['value'])
+                    ? (string) $data['totalAmount']['value']
+                    : null,
+
+            currency: (string) (
+                $data['paidAmount']['currency']
+                ?? $data['totalAmount']['currency']
+                ?? 'IDR'
+            ),
+
+            transactionStatus:
+                isset($additionalInfo['transactionStatus'])
+                    ? (string) $additionalInfo['transactionStatus']
+                    : null,
+
+            paymentRef:
+                isset($additionalInfo['paymentRef'])
+                    ? (string) $additionalInfo['paymentRef']
+                    : null,
+
+            rrn:
+                isset($additionalInfo['rrn'])
+                    ? (string) $additionalInfo['rrn']
+                    : null,
+
+            approvalCode:
+                isset($additionalInfo['approvalCode'])
+                    ? (string) $additionalInfo['approvalCode']
+                    : null,
+
+            trxId:
+                isset($additionalInfo['trxId'])
+                    ? (string) $additionalInfo['trxId']
+                    : null,
+
             payload: $data,
         );
     }

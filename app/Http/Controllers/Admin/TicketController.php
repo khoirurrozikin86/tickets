@@ -12,8 +12,16 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Yajra\DataTables\Facades\DataTables;
 
+
 use App\Exports\TicketsExport;
 use Maatwebsite\Excel\Facades\Excel;
+
+
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TicketController extends Controller
 {
@@ -75,26 +83,33 @@ class TicketController extends Controller
         }
 
         /*
-         * Filter tanggal dari
-         */
-        if ($request->filled('date_from')) {
-            $builder->whereDate(
-                'tickets.visit_date',
-                '>=',
-                $request->date_from
-            );
-        }
+ * Filter tanggal
+ *
+ * Default:
+ * Jika user tidak memilih tanggal,
+ * tampilkan ticket hari ini saja.
+ */
+        $dateFrom = $request->input(
+            'date_from',
+            now()->format('Y-m-d')
+        );
 
-        /*
-         * Filter tanggal sampai
-         */
-        if ($request->filled('date_to')) {
-            $builder->whereDate(
-                'tickets.visit_date',
-                '<=',
-                $request->date_to
-            );
-        }
+        $dateTo = $request->input(
+            'date_to',
+            now()->format('Y-m-d')
+        );
+
+        $builder->whereDate(
+            'tickets.visit_date',
+            '>=',
+            $dateFrom
+        );
+
+        $builder->whereDate(
+            'tickets.visit_date',
+            '<=',
+            $dateTo
+        );
 
         return DataTables::eloquent($builder)
 
@@ -171,44 +186,71 @@ class TicketController extends Controller
             /*
              * Actions
              */
+            /*
+ * Actions
+ */
             ->addColumn('actions', function ($ticket) {
 
                 $html = '
-                    <a href="' .
+        <div class="d-flex align-items-center justify-content-center gap-1">
+
+        
+            <a href="' .
                     route(
                         'super.tickets.show',
                         $ticket->id
                     ) .
                     '"
-                    class="ticket-action btn-ticket-detail"
-                    title="Detail">
+            class="ticket-action btn-ticket-detail"
+            title="Detail">
 
-                        <i data-feather="eye"></i>
+                <i data-feather="eye"></i>
 
-                    </a>
-                ';
+            </a>
+
+           
+            <a href="' .
+                    route(
+                        'super.tickets.pdf',
+                        $ticket->id
+                    ) .
+                    '"
+            class="ticket-action"
+            title="Lihat E-Ticket PDF"
+            target="_blank">
+
+                <i data-feather="file-text"></i>
+
+            </a>
+
+    ';
 
                 /*
-                 * Cancel hanya untuk ACTIVE
-                 */
+     * Cancel hanya untuk ACTIVE
+     */
                 if ($ticket->status === 'ACTIVE') {
 
                     $html .= '
-                        <a href="#"
-                        class="ticket-action cancel btn-ticket-cancel"
-                        data-url="' .
+          
+            <a href="#"
+            class="ticket-action cancel btn-ticket-cancel"
+            data-url="' .
                         route(
                             'super.tickets.cancel',
                             $ticket->id
                         ) .
                         '"
-                        title="Cancel">
+            title="Cancel">
 
-                            <i data-feather="x-circle"></i>
+                <i data-feather="x-circle"></i>
 
-                        </a>
-                    ';
+            </a>
+        ';
                 }
+
+                $html .= '
+        </div>
+    ';
 
                 return $html;
             })
@@ -284,15 +326,69 @@ class TicketController extends Controller
 
 
 
+    /**
+     * Generate E-Ticket PDF.
+     */
+    public function pdf(Ticket $ticket)
+    {
+        $ticket->load([
+            'order',
+            'orderItem',
+            'product',
+            'usedBy',
+        ]);
+
+        /*
+     * Generate QR Code menggunakan Bacon QR Code
+     * dan Imagick agar hasilnya PNG.
+     */
+        $renderer = new ImageRenderer(
+            new RendererStyle(220, 10),
+            new ImagickImageBackEnd()
+        );
+
+        $writer = new Writer($renderer);
+
+        $qrCode = $writer->writeString($ticket->token);
+
+        /*
+     * Encode PNG ke Base64 agar bisa langsung
+     * digunakan oleh DomPDF tanpa menyimpan file.
+     */
+        $qrBase64 = base64_encode($qrCode);
+
+        return Pdf::loadView(
+            'super.tickets.pdf',
+            compact(
+                'ticket',
+                'qrBase64'
+            )
+        )
+            ->setPaper('a4', 'portrait')
+            ->stream(
+                $ticket->ticket_number . '.pdf'
+            );
+    }
+
 
     public function export(Request $request)
     {
+        $today = now()->format('Y-m-d');
+
         $filters = [
-            'ticket_number' => $request->ticket_number,
-            'product_id'    => $request->product_id,
-            'status'        => $request->status,
-            'date_from'     => $request->date_from,
-            'date_to'       => $request->date_to,
+            'ticket_number' => $request->input('ticket_number'),
+            'product_id'    => $request->input('product_id'),
+            'status'        => $request->input('status'),
+
+            'date_from' => $request->input(
+                'date_from',
+                $today
+            ),
+
+            'date_to' => $request->input(
+                'date_to',
+                $today
+            ),
         ];
 
         return Excel::download(

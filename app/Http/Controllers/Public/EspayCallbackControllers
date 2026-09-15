@@ -1,0 +1,430 @@
+<?php
+
+namespace App\Http\Controllers\Public;
+
+use App\Domain\Payments\DTOs\EspayInquiryData;
+use App\Domain\Payments\DTOs\EspayPaymentData;
+use App\Domain\Payments\Services\EspayCallbackService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class EspayCallbackController extends Controller
+{
+    public function __construct(
+        private readonly EspayCallbackService $callbackService,
+    ) {}
+
+    /**
+     * ESPay Inquiry Callback.
+     */
+    public function inquiry(Request $request): JsonResponse
+    {
+        $data = $request->json()->all();
+
+        $this->logCallback('INQUIRY', $request, $data);
+
+        try {
+            $result = $this->callbackService->inquiry(
+                EspayInquiryData::fromArray($data)
+            );
+
+            return response()->json($result);
+
+        } catch (\Throwable $e) {
+            Log::error('ESPay INQUIRY CALLBACK ERROR', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'responseCode' => '5002400',
+                'responseMessage' => 'Internal Server Error',
+            ]);
+        }
+    }
+
+    /**
+     * ESPay Payment Notification Callback.
+     */
+    public function payment(Request $request): JsonResponse
+    {
+        $data = $request->json()->all();
+
+        $this->logCallback('PAYMENT', $request, $data);
+
+        if (! is_array($data) || empty($data)) {
+            return $this->errorResponse(
+                '4002500',
+                'Invalid Request'
+            );
+        }
+
+        /*
+         * Signature verification tetap di Controller.
+         *
+         * Karena ini merupakan HTTP/security concern,
+         * bukan business logic payment.
+         */
+        if (! $this->verifySignature($request)) {
+            Log::warning('ESPay PAYMENT INVALID SIGNATURE');
+
+            return $this->errorResponse(
+                '4012500',
+                'Unauthorized'
+            );
+        }
+
+        /*
+         * Partner validation juga tetap di Controller.
+         */
+        if (! $this->isValidPartner($request)) {
+            Log::warning('ESPay PAYMENT INVALID PARTNER ID', [
+                'partner_id' => $request->header('X-PARTNER-ID'),
+            ]);
+
+            return $this->errorResponse(
+                '4012500',
+                'Unauthorized'
+            );
+        }
+
+        /*
+         * Reference ESPay:
+         *
+         * DS17P17
+         *
+         * order_id = 17
+         * payment_id = 17
+         */
+        $virtualAccountNo = $data['virtualAccountNo'] ?? null;
+
+        if (! $virtualAccountNo) {
+            return $this->errorResponse(
+                '4002500',
+                'Virtual Account Not Found'
+            );
+        }
+
+        $reference = $this->parseReference(
+            $virtualAccountNo
+        );
+
+        if (! $reference) {
+            Log::warning(
+                'ESPay PAYMENT INVALID REFERENCE',
+                [
+                    'virtual_account_no' =>
+                        $virtualAccountNo,
+                ]
+            );
+
+            return $this->errorResponse(
+                '4002500',
+                'Invalid Reference'
+            );
+        }
+
+        try {
+            $result = $this->callbackService->payment(
+                EspayPaymentData::fromArray($data),
+                $reference['order_id'],
+                $reference['payment_id'],
+            );
+
+            if (! ($result['success'] ?? false)) {
+                return $this->errorResponse(
+                    $result['responseCode']
+                        ?? '4002500',
+                    $result['responseMessage']
+                        ?? 'Payment Failed'
+                );
+            }
+
+            return $this->paymentSuccessResponse(
+                $result['order'],
+                $result['payment'],
+                $virtualAccountNo,
+                $data['paymentRequestId'] ?? null,
+            );
+
+        } catch (\Throwable $e) {
+            Log::error(
+                'ESPay PAYMENT CALLBACK ERROR',
+                [
+                    'virtual_account_no' =>
+                        $virtualAccountNo,
+
+                    'error' =>
+                        $e->getMessage(),
+                ]
+            );
+
+            return $this->errorResponse(
+                '5002500',
+                'Internal Server Error'
+            );
+        }
+    }
+
+    /**
+     * Verify ESPay asymmetric signature.
+     */
+    private function verifySignature(
+        Request $request
+    ): bool {
+        $signature =
+            $request->header('X-SIGNATURE');
+
+        $timestamp =
+            $request->header('X-TIMESTAMP');
+
+        if (! $signature || ! $timestamp) {
+            Log::warning(
+                'ESPay PAYMENT SIGNATURE HEADER MISSING'
+            );
+
+            return false;
+        }
+
+        $rawBody = $request->getContent();
+
+        if ($rawBody === '') {
+            return false;
+        }
+
+        $bodyHash = strtolower(
+            hash('sha256', $rawBody)
+        );
+
+        $relativeUrl = '/api/espay/payment';
+
+        $stringToSign = sprintf(
+            'POST:%s:%s:%s',
+            $relativeUrl,
+            $bodyHash,
+            $timestamp
+        );
+
+        $publicKeyPath = config(
+            'espay.public_key_path',
+            'storage/app/private/espay/public.key'
+        );
+
+        if (! str_starts_with($publicKeyPath, '/')) {
+            $publicKeyPath =
+                base_path($publicKeyPath);
+        }
+
+        if (! is_file($publicKeyPath)) {
+            Log::error(
+                'ESPay PUBLIC KEY NOT FOUND',
+                [
+                    'path' => $publicKeyPath,
+                ]
+            );
+
+            return false;
+        }
+
+        $publicKey =
+            file_get_contents($publicKeyPath);
+
+        if ($publicKey === false) {
+            return false;
+        }
+
+        $decodedSignature =
+            base64_decode(
+                $signature,
+                true
+            );
+
+        if ($decodedSignature === false) {
+            return false;
+        }
+
+        $result = openssl_verify(
+            $stringToSign,
+            $decodedSignature,
+            $publicKey,
+            OPENSSL_ALGO_SHA256
+        );
+
+        /*
+         * Jangan log signature/body lengkap
+         * setelah debugging selesai.
+         */
+        Log::info(
+            'ESPay PAYMENT SIGNATURE VERIFY',
+            [
+                'result' => $result,
+                'timestamp' => $timestamp,
+                'relative_url' => $relativeUrl,
+                'body_hash' => $bodyHash,
+                'raw_body_length' =>
+                    strlen($rawBody),
+            ]
+        );
+
+        return $result === 1;
+    }
+
+    /**
+     * Validate ESPay partner ID.
+     */
+    private function isValidPartner(
+        Request $request
+    ): bool {
+        $partnerId =
+            $request->header('X-PARTNER-ID');
+
+        $merchantCode =
+            config('espay.merchant_code');
+
+        if (! $partnerId || ! $merchantCode) {
+            return false;
+        }
+
+        return hash_equals(
+            (string) $merchantCode,
+            (string) $partnerId
+        );
+    }
+
+    /**
+     * Parse ESPay reference.
+     *
+     * Example:
+     *
+     * DS17P17
+     */
+    private function parseReference(
+        string $virtualAccountNo
+    ): ?array {
+        if (
+            ! preg_match(
+                '/^DS(\d+)P(\d+)$/',
+                $virtualAccountNo,
+                $matches
+            )
+        ) {
+            return null;
+        }
+
+        return [
+            'order_id' => (int) $matches[1],
+            'payment_id' => (int) $matches[2],
+        ];
+    }
+
+    /**
+     * Payment success response.
+     */
+    private function paymentSuccessResponse(
+        $order,
+        $payment,
+        string $virtualAccountNo,
+        ?string $paymentRequestId
+    ): JsonResponse {
+        return response()->json([
+            'responseCode' => '2002500',
+
+            'responseMessage' => 'Success',
+
+            'virtualAccountData' => [
+                'partnerServiceId' => ' Espay',
+
+                'customerNo' =>
+                    config('espay.merchant_code'),
+
+                'virtualAccountNo' =>
+                    $virtualAccountNo,
+
+                'virtualAccountName' =>
+                    $order->customer_name,
+
+                'paymentRequestId' =>
+                    $paymentRequestId,
+
+                'totalAmount' => [
+                    'value' => number_format(
+                        (float) $payment->amount,
+                        2,
+                        '.',
+                        ''
+                    ),
+
+                    'currency' =>
+                        $order->currency ?? 'IDR',
+                ],
+
+                'billDetails' => [
+                    [
+                        'billDescription' => [
+                            'english' =>
+                                'Dusun Semilir Ticket',
+
+                            'indonesia' =>
+                                'Tiket Dusun Semilir',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Log callback request.
+     */
+    private function logCallback(
+        string $type,
+        Request $request,
+        array $data
+    ): void {
+        Log::info(
+            "ESPay {$type} RECEIVED",
+            [
+                'ip' => $request->ip(),
+
+                'method' =>
+                    $request->method(),
+
+                'partner_id' =>
+                    $request->header(
+                        'X-PARTNER-ID'
+                    ),
+
+                'external_id' =>
+                    $request->header(
+                        'X-EXTERNAL-ID'
+                    ),
+
+                'channel_id' =>
+                    $request->header(
+                        'CHANNEL-ID'
+                    ),
+
+                'timestamp' =>
+                    $request->header(
+                        'X-TIMESTAMP'
+                    ),
+
+                'body' =>
+                    $request->getContent(),
+            ]
+        );
+    }
+
+    /**
+     * Standard error response.
+     */
+    private function errorResponse(
+        string $code,
+        string $message
+    ): JsonResponse {
+        return response()->json([
+            'responseCode' => $code,
+            'responseMessage' => $message,
+        ]);
+    }
+}

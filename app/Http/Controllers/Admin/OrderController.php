@@ -14,6 +14,13 @@ use App\Http\Controllers\Controller;
 use App\Exports\OrdersExport;
 use Maatwebsite\Excel\Facades\Excel;
 
+
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 class OrderController extends Controller
 {
     public function index(): View
@@ -64,22 +71,36 @@ class OrderController extends Controller
                 $request->status
             );
         }
+        /*
+|--------------------------------------------------------------------------
+| Filter tanggal
+|
+| Default:
+| Jika tanggal tidak dikirim, tampilkan order hari ini.
+|--------------------------------------------------------------------------
+*/
 
-        if ($request->filled('date_from')) {
-            $builder->whereDate(
-                'orders.created_at',
-                '>=',
-                $request->date_from
-            );
-        }
+        $dateFrom = $request->input(
+            'date_from',
+            now()->format('Y-m-d')
+        );
 
-        if ($request->filled('date_to')) {
-            $builder->whereDate(
-                'orders.created_at',
-                '<=',
-                $request->date_to
-            );
-        }
+        $dateTo = $request->input(
+            'date_to',
+            now()->format('Y-m-d')
+        );
+
+        $builder->whereDate(
+            'orders.created_at',
+            '>=',
+            $dateFrom
+        );
+
+        $builder->whereDate(
+            'orders.created_at',
+            '<=',
+            $dateTo
+        );
 
         return DataTables::eloquent($builder)
 
@@ -221,16 +242,39 @@ class OrderController extends Controller
             ->addColumn('actions', function ($order) {
 
                 return '
-                    <a href="'
-                    . route('super.orders.show', $order->id) .
+        <div class="d-flex align-items-center justify-content-center gap-1">
+
+        
+            <a href="' .
+                    route(
+                        'super.orders.show',
+                        $order->id
+                    ) .
                     '"
-                    class="order-action"
-                    title="Detail">
+            class="order-action"
+            title="Detail Order">
 
-                        <i data-feather="eye"></i>
+                <i data-feather="eye"></i>
 
-                    </a>
-                ';
+            </a>
+
+          
+            <a href="' .
+                    route(
+                        'super.orders.tickets.pdf',
+                        $order->id
+                    ) .
+                    '"
+            class="order-action"
+            title="Lihat Semua E-Ticket"
+            target="_blank">
+
+                <i data-feather="file-text"></i>
+
+            </a>
+
+        </div>
+    ';
             })
 
             ->rawColumns([
@@ -262,18 +306,98 @@ class OrderController extends Controller
 
     public function export(Request $request)
     {
+        $today = now()->format('Y-m-d');
+
         $filters = [
-            'order_number'  => $request->order_number,
-            'customer'      => $request->customer,
-            'payment_status' => $request->payment_status,
-            'status'        => $request->status,
-            'date_from'     => $request->date_from,
-            'date_to'       => $request->date_to,
+
+            'order_number' => $request->input(
+                'order_number'
+            ),
+
+            'customer' => $request->input(
+                'customer'
+            ),
+
+            'payment_status' => $request->input(
+                'payment_status'
+            ),
+
+            'status' => $request->input(
+                'status'
+            ),
+
+            /*
+        |--------------------------------------------------------------------------
+        | Default tanggal = hari ini
+        |--------------------------------------------------------------------------
+        */
+
+            'date_from' => $request->input(
+                'date_from',
+                $today
+            ),
+
+            'date_to' => $request->input(
+                'date_to',
+                $today
+            ),
+
         ];
 
         return Excel::download(
+
             new OrdersExport($filters),
-            'orders-' . now()->format('Y-m-d-His') . '.xlsx'
+
+            'orders-' .
+                now()->format('Y-m-d-His') .
+                '.xlsx'
+
         );
+    }
+
+
+    public function ticketsPdf(Order $order)
+    {
+        $order->load([
+            'tickets',
+            'items',
+        ]);
+
+        $tickets = $order->tickets
+            ->sortBy('id')
+            ->values();
+
+        if ($tickets->isEmpty()) {
+            abort(404, 'Order ini belum memiliki ticket.');
+        }
+
+        $qrCodes = [];
+
+        foreach ($tickets as $ticket) {
+
+            $renderer = new ImageRenderer(
+                new RendererStyle(220, 10),
+                new ImagickImageBackEnd()
+            );
+
+            $writer = new Writer($renderer);
+
+            $qrCodes[$ticket->id] = base64_encode(
+                $writer->writeString($ticket->token)
+            );
+        }
+
+        return Pdf::loadView(
+            'super.orders.tickets-pdf',
+            compact(
+                'order',
+                'tickets',
+                'qrCodes'
+            )
+        )
+            ->setPaper('a4', 'portrait')
+            ->stream(
+                'E-Ticket-' . $order->order_number . '.pdf'
+            );
     }
 }

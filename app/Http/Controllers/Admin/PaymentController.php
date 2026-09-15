@@ -82,21 +82,35 @@ class PaymentController extends Controller
             );
         }
 
-        if ($request->filled('date_from')) {
-            $builder->whereDate(
-                'payments.created_at',
-                '>=',
-                $request->date_from
-            );
-        }
+        /*
+|--------------------------------------------------------------------------
+| Filter tanggal
+|
+| Default = hari ini
+|--------------------------------------------------------------------------
+*/
 
-        if ($request->filled('date_to')) {
-            $builder->whereDate(
-                'payments.created_at',
-                '<=',
-                $request->date_to
-            );
-        }
+        $dateFrom = $request->input(
+            'date_from',
+            now()->format('Y-m-d')
+        );
+
+        $dateTo = $request->input(
+            'date_to',
+            now()->format('Y-m-d')
+        );
+
+        $builder->whereDate(
+            'payments.created_at',
+            '>=',
+            $dateFrom
+        );
+
+        $builder->whereDate(
+            'payments.created_at',
+            '<=',
+            $dateTo
+        );
 
         return DataTables::eloquent($builder)
 
@@ -233,15 +247,36 @@ class PaymentController extends Controller
 
     public function export(Request $request): BinaryFileResponse
     {
+        $today = now()->format('Y-m-d');
+
         $filters = [
-            'payment_number' => $request->payment_number,
-            'order_number'   => $request->order_number,
-            'customer'       => $request->customer,
-            'gateway'        => $request->gateway,
-            'payment_method' => $request->payment_method,
-            'status'         => $request->status,
-            'date_from'      => $request->date_from,
-            'date_to'        => $request->date_to,
+            'payment_number' => $request->input('payment_number'),
+
+            'order_number' => $request->input('order_number'),
+
+            'customer' => $request->input('customer'),
+
+            'gateway' => $request->input('gateway'),
+
+            'payment_method' => $request->input('payment_method'),
+
+            'status' => $request->input('status'),
+
+            /*
+        |--------------------------------------------------------------------------
+        | Default tanggal = hari ini
+        |--------------------------------------------------------------------------
+        */
+
+            'date_from' => $request->input(
+                'date_from',
+                $today
+            ),
+
+            'date_to' => $request->input(
+                'date_to',
+                $today
+            ),
         ];
 
         return Excel::download(

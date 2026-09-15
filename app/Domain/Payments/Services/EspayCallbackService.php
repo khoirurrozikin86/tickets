@@ -6,7 +6,6 @@ use App\Domain\Payments\Actions\ProcessEspayInquiryAction;
 use App\Domain\Payments\Actions\ProcessEspayPaymentAction;
 use App\Domain\Payments\DTOs\EspayInquiryData;
 use App\Domain\Payments\DTOs\EspayPaymentData;
-use Illuminate\Support\Facades\Log;
 
 final class EspayCallbackService
 {
@@ -17,23 +16,20 @@ final class EspayCallbackService
 
     public function inquiry(array $payload): array
     {
-        Log::info('ESPay Inquiry Callback', [
-            'payload' => $payload,
-        ]);
-
         return $this->inquiryAction->execute(
             EspayInquiryData::fromArray($payload)
         );
     }
 
-    public function payment(array $payload): array
-    {
-        Log::info('ESPay Payment Callback', [
-            'payload' => $payload,
-        ]);
-
+    public function payment(
+        array $payload,
+        int $orderId,
+        int $paymentId,
+    ): array {
         return $this->paymentAction->execute(
-            EspayPaymentData::fromArray($payload)
+            EspayPaymentData::fromArray($payload),
+            $orderId,
+            $paymentId,
         );
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Discount extends Model
 {
@@ -30,4 +31,9 @@ class Discount extends Model
         'usage_count' => 'integer',
         'is_active' => 'boolean',
     ];
+
+    public function usages(): HasMany
+    {
+        return $this->hasMany(DiscountUsage::class);
+    }
 }
