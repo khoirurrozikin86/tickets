@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import type { MouseEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 export interface Banner {
@@ -15,16 +16,43 @@ interface HeroSliderProps {
     banners: Banner[];
 }
 
-const SLIDE_DURATION = 6500;
-const TRANSITION_DURATION = 500;
+/*
+|--------------------------------------------------------------------------
+| Configuration
+|--------------------------------------------------------------------------
+*/
 
-export default function HeroSlider({ banners }: HeroSliderProps) {
+const SLIDE_DURATION = 6500;
+const TRANSITION_DURATION = 450;
+
+/*
+|--------------------------------------------------------------------------
+| Hero Slider
+|--------------------------------------------------------------------------
+*/
+
+export default function HeroSlider({
+    banners,
+}: HeroSliderProps) {
     const [current, setCurrent] = useState(0);
     const [isChanging, setIsChanging] = useState(false);
 
-    const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(
         null,
     );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cleanup Timer
+    |--------------------------------------------------------------------------
+    */
+
+    const clearTimer = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    };
 
     /*
     |--------------------------------------------------------------------------
@@ -34,29 +62,29 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
 
     const changeSlide = (index: number) => {
         if (
+            banners.length <= 1 ||
             index === current ||
-            isChanging ||
             index < 0 ||
-            index >= banners.length
+            index >= banners.length ||
+            isChanging
         ) {
             return;
         }
 
+        clearTimer();
+
         setIsChanging(true);
 
-        if (transitionTimer.current) {
-            clearTimeout(transitionTimer.current);
-        }
-
-        transitionTimer.current = setTimeout(() => {
+        timerRef.current = setTimeout(() => {
             setCurrent(index);
             setIsChanging(false);
+            timerRef.current = null;
         }, TRANSITION_DURATION);
     };
 
     /*
     |--------------------------------------------------------------------------
-    | Auto Slider
+    | Auto Slide
     |--------------------------------------------------------------------------
     */
 
@@ -68,23 +96,47 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
         const interval = setInterval(() => {
             setIsChanging(true);
 
-            transitionTimer.current = setTimeout(() => {
+            timerRef.current = setTimeout(() => {
                 setCurrent((previous) => {
                     return (previous + 1) % banners.length;
                 });
 
                 setIsChanging(false);
+                timerRef.current = null;
             }, TRANSITION_DURATION);
         }, SLIDE_DURATION);
 
         return () => {
             clearInterval(interval);
-
-            if (transitionTimer.current) {
-                clearTimeout(transitionTimer.current);
-            }
+            clearTimer();
         };
     }, [banners.length]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Preload Next Image
+    |--------------------------------------------------------------------------
+    |
+    | Hanya gambar berikutnya yang dipersiapkan.
+    | Tidak semua banner langsung dimuat sekaligus.
+    |
+    */
+
+    useEffect(() => {
+        if (banners.length <= 1) {
+            return;
+        }
+
+        const nextIndex = (current + 1) % banners.length;
+        const nextImage = banners[nextIndex]?.image;
+
+        if (!nextImage) {
+            return;
+        }
+
+        const image = new Image();
+        image.src = nextImage;
+    }, [current, banners]);
 
     /*
     |--------------------------------------------------------------------------
@@ -97,59 +149,24 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
             <section
                 className="
                     relative
-                    isolate
-                    min-h-[560px]
+                    min-h-[540px]
                     overflow-hidden
-                    bg-gradient-to-b
-                    from-emerald-900
-                    via-emerald-950
-                    to-emerald-900
-                    sm:min-h-[620px]
+                    bg-emerald-950
+                    sm:min-h-[600px]
+                    lg:min-h-[650px]
                 "
             >
-                {/* Soft Background */}
-
-                <div
-                    className="
-                        pointer-events-none
-                        absolute
-                        -left-40
-                        top-1/4
-                        h-96
-                        w-96
-                        rounded-full
-                        bg-emerald-400/20
-                        blur-[110px]
-                    "
-                />
-
-                <div
-                    className="
-                        pointer-events-none
-                        absolute
-                        -right-40
-                        bottom-20
-                        h-96
-                        w-96
-                        rounded-full
-                        bg-lime-300/10
-                        blur-[110px]
-                    "
-                />
-
-                {/* Content */}
-
                 <div
                     className="
                         relative
-                        z-10
                         flex
-                        min-h-[560px]
+                        min-h-[540px]
                         items-center
                         justify-center
                         px-6
                         text-center
-                        sm:min-h-[620px]
+                        sm:min-h-[600px]
+                        lg:min-h-[650px]
                     "
                 >
                     <div className="max-w-2xl">
@@ -161,21 +178,28 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                                 text-xs
                                 font-semibold
                                 uppercase
-                                tracking-[0.18em]
+                                tracking-[0.16em]
                                 text-emerald-300
                             "
                         >
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                            <span
+                                className="
+                                    h-1.5
+                                    w-1.5
+                                    rounded-full
+                                    bg-emerald-300
+                                "
+                            />
 
                             Dusun Semilir
                         </div>
 
                         <h1
                             className="
-                                mt-6
+                                mt-5
                                 text-4xl
                                 font-black
-                                leading-[1.05]
+                                leading-tight
                                 tracking-tight
                                 text-white
                                 sm:text-5xl
@@ -193,7 +217,7 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                                 mx-auto
                                 mt-6
                                 h-1
-                                w-16
+                                w-14
                                 rounded-full
                                 bg-emerald-400
                             "
@@ -208,131 +232,126 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
 
     const banner = banners[current];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Same Page Hash Navigation
+    |--------------------------------------------------------------------------
+    */
+
+    const handleBannerClick = (
+        event: MouseEvent<HTMLAnchorElement>,
+    ) => {
+        const url = banner.button_url;
+
+        if (!url || !url.includes('#')) {
+            return;
+        }
+
+        const [path, hash] = url.split('#');
+
+        const currentPath = window.location.pathname;
+
+        const isSamePage =
+            !path ||
+            path === '/' ||
+            path === currentPath;
+
+        if (!isSamePage || !hash) {
+            return;
+        }
+
+        const target = document.getElementById(hash);
+
+        if (!target) {
+            return;
+        }
+
+        event.preventDefault();
+
+        target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+        });
+
+        window.history.pushState(
+            null,
+            '',
+            `#${hash}`,
+        );
+    };
+
     return (
         <section
             className="
                 relative
-                isolate
-                min-h-[570px]
+                min-h-[540px]
                 overflow-hidden
                 bg-emerald-950
-                sm:min-h-[630px]
-                lg:min-h-[680px]
+                sm:min-h-[600px]
+                lg:min-h-[650px]
             "
         >
             {/* =====================================================
-                SLIDES
+                ACTIVE IMAGE
             ===================================================== */}
 
             <div className="absolute inset-0">
-                {banners.map((item, index) => (
-                    <div
-                        key={item.id}
-                        className={`
-                            absolute
-                            inset-0
-                            overflow-hidden
-                            transition-all
-                            duration-[1200ms]
-                            ease-out
-                            ${index === current
-                                ? 'scale-100 opacity-100'
-                                : 'scale-[1.035] opacity-0'
-                            }
-                        `}
-                    >
-                        <img
-                            src={item.image}
-                            alt={item.title}
-                            className={`
-                                h-full
-                                w-full
-                                object-cover
-                                transition-transform
-                                duration-[7500ms]
-                                ease-out
-                                ${index === current
-                                    ? 'scale-[1.035]'
-                                    : 'scale-100'
-                                }
-                            `}
-                        />
-                    </div>
-                ))}
+                <img
+                    key={banner.id}
+                    src={banner.image}
+                    alt={banner.title}
+                    fetchPriority={
+                        current === 0 ? 'high' : 'auto'
+                    }
+                    loading={
+                        current === 0 ? 'eager' : 'lazy'
+                    }
+                    decoding="async"
+                    className={`
+                        h-full
+                        w-full
+                        object-cover
+                        transition-opacity
+                        duration-[450ms]
+                        ease-out
+                        ${isChanging
+                            ? 'opacity-0'
+                            : 'opacity-100'
+                        }
+                    `}
+                />
             </div>
 
             {/* =====================================================
-                GREEN IMAGE OVERLAY
+                DARK OVERLAY
             ===================================================== */}
-
-            {/* Left readability */}
-
-            <div
-                className="
-                    absolute
-                    inset-0
-                    bg-gradient-to-r
-                    from-emerald-950/65
-                    via-emerald-950/30
-                    to-transparent
-                "
-            />
-
-            {/* Bottom green atmosphere */}
-
-            <div
-                className="
-                    absolute
-                    inset-x-0
-                    bottom-0
-                    h-64
-                    bg-gradient-to-t
-                    from-emerald-950/80
-                    via-emerald-950/30
-                    to-transparent
-                "
-            />
-
-            {/* Very subtle green tint */}
 
             <div
                 className="
                     pointer-events-none
                     absolute
                     inset-0
-                    bg-emerald-700/[0.045]
+                    bg-gradient-to-r
+                    from-emerald-950/70
+                    via-emerald-950/30
+                    to-transparent
                 "
             />
 
             {/* =====================================================
-                SOFT LIGHT
+                BOTTOM OVERLAY
             ===================================================== */}
 
             <div
                 className="
                     pointer-events-none
                     absolute
-                    -left-40
-                    top-1/3
-                    h-96
-                    w-96
-                    rounded-full
-                    bg-emerald-400/10
-                    blur-[120px]
-                "
-            />
-
-            <div
-                className="
-                    pointer-events-none
-                    absolute
-                    -right-40
-                    bottom-20
-                    h-96
-                    w-96
-                    rounded-full
-                    bg-lime-300/10
-                    blur-[120px]
+                    inset-x-0
+                    bottom-0
+                    h-52
+                    bg-gradient-to-t
+                    from-emerald-950/75
+                    to-transparent
                 "
             />
 
@@ -345,10 +364,10 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                     relative
                     z-10
                     flex
-                    min-h-[570px]
+                    min-h-[540px]
                     items-center
-                    sm:min-h-[630px]
-                    lg:min-h-[680px]
+                    sm:min-h-[600px]
+                    lg:min-h-[650px]
                 "
             >
                 <div
@@ -366,11 +385,11 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                         className={`
                             max-w-xl
                             transition-all
-                            duration-700
-                            ease-[cubic-bezier(.22,1,.36,1)]
+                            duration-[450ms]
+                            ease-out
                             ${isChanging
-                                ? 'translate-y-5 opacity-0 blur-[3px]'
-                                : 'translate-y-0 opacity-100 blur-0'
+                                ? 'translate-y-2 opacity-0'
+                                : 'translate-y-0 opacity-100'
                             }
                         `}
                     >
@@ -396,7 +415,6 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                                     w-1.5
                                     rounded-full
                                     bg-emerald-300
-                                    shadow-[0_0_12px_rgba(110,231,183,.8)]
                                 "
                             />
 
@@ -410,14 +428,13 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                         <h1
                             className="
                                 max-w-2xl
-                                text-[2.7rem]
+                                text-[2.5rem]
                                 font-black
-                                leading-[1.04]
-                                tracking-[-0.025em]
+                                leading-[1.05]
+                                tracking-tight
                                 text-white
-                                drop-shadow-[0_4px_20px_rgba(0,0,0,.25)]
                                 sm:text-5xl
-                                lg:text-[3.6rem]
+                                lg:text-[3.5rem]
                             "
                         >
                             {banner.title}
@@ -438,7 +455,7 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                             <span
                                 className="
                                     h-[3px]
-                                    w-12
+                                    w-11
                                     rounded-full
                                     bg-emerald-400
                                 "
@@ -466,7 +483,6 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                                     text-sm
                                     leading-6
                                     text-white/80
-                                    drop-shadow-md
                                     sm:text-[15px]
                                     sm:leading-7
                                 "
@@ -479,63 +495,65 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                             BUTTON
                         ================================================= */}
 
-                        {banner.button_text && banner.button_url && (
-                            <div className="mt-7">
-                                <Link
-                                    href={banner.button_url}
-                                    className="
-                                        group/button
-                                        inline-flex
-                                        items-center
-                                        gap-3
-                                        rounded-full
-                                        bg-emerald-500
-                                        px-5
-                                        py-2.5
-                                        text-sm
-                                        font-bold
-                                        text-white
-                                        shadow-[0_8px_28px_rgba(6,78,59,.30)]
-                                        transition-all
-                                        duration-300
-                                        hover:-translate-y-0.5
-                                        hover:bg-emerald-400
-                                    "
-                                >
-                                    <span>
-                                        {banner.button_text}
-                                    </span>
-
-                                    <span
+                        {banner.button_text &&
+                            banner.button_url && (
+                                <div className="mt-7">
+                                    <Link
+                                        href={banner.button_url}
+                                        onClick={
+                                            handleBannerClick
+                                        }
                                         className="
-                                            flex
-                                            h-6
-                                            w-6
+                                            inline-flex
                                             items-center
-                                            justify-center
+                                            gap-3
                                             rounded-full
-                                            bg-white/15
-                                            transition-transform
-                                            duration-300
-                                            group-hover/button:translate-x-1
+                                            bg-emerald-500
+                                            px-5
+                                            py-2.5
+                                            text-sm
+                                            font-bold
+                                            text-white
+                                            shadow-lg
+                                            transition
+                                            duration-200
+                                            hover:bg-emerald-400
                                         "
                                     >
-                                        <svg
-                                            viewBox="0 0 24 24"
-                                            className="h-3.5 w-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
+                                        <span>
+                                            {
+                                                banner.button_text
+                                            }
+                                        </span>
+
+                                        <span
+                                            className="
+                                                flex
+                                                h-6
+                                                w-6
+                                                items-center
+                                                justify-center
+                                                rounded-full
+                                                bg-white/15
+                                            "
                                         >
-                                            <path d="M5 12h14" />
-                                            <path d="m13 6 6 6-6 6" />
-                                        </svg>
-                                    </span>
-                                </Link>
-                            </div>
-                        )}
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                className="h-3.5 w-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                aria-hidden="true"
+                                            >
+                                                <path d="M5 12h14" />
+                                                <path d="m13 6 6 6-6 6" />
+                                            </svg>
+                                        </span>
+                                    </Link>
+                                </div>
+                            )}
                     </div>
                 </div>
             </div>
@@ -565,73 +583,31 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                             disabled={isChanging}
                             aria-label={`Slide ${index + 1}`}
                             aria-current={
-                                index === current ? 'true' : undefined
+                                index === current
+                                    ? 'true'
+                                    : undefined
                             }
                             className={`
-                                relative
                                 h-1.5
-                                overflow-hidden
                                 rounded-full
                                 transition-all
-                                duration-500
+                                duration-300
                                 disabled:cursor-default
                                 ${index === current
-                                    ? 'w-12 bg-white/80'
-                                    : 'w-4 bg-white/35 hover:bg-white/60'
+                                    ? 'w-10 bg-white/80'
+                                    : 'w-3 bg-white/35'
                                 }
                             `}
-                        >
-                            {index === current && (
-                                <span
-                                    key={current}
-                                    className="
-                                        absolute
-                                        inset-y-0
-                                        left-0
-                                        w-full
-                                        origin-left
-                                        rounded-full
-                                        bg-emerald-400
-                                        animate-[progress_6.5s_linear_forwards]
-                                    "
-                                />
-                            )}
-                        </button>
+                        />
                     ))}
                 </div>
             )}
 
             {/* =====================================================
-                GREEN BOTTOM WAVE
+                BOTTOM WAVE
             ===================================================== */}
 
             <HeroBottomWave />
-
-            {/* =====================================================
-                ANIMATION
-            ===================================================== */}
-
-            <style>{`
-                @keyframes progress {
-                    from {
-                        transform: scaleX(0);
-                    }
-
-                    to {
-                        transform: scaleX(1);
-                    }
-                }
-
-                @media (prefers-reduced-motion: reduce) {
-                    *,
-                    *::before,
-                    *::after {
-                        animation-duration: 0.01ms !important;
-                        animation-iteration-count: 1 !important;
-                        transition-duration: 0.01ms !important;
-                    }
-                }
-            `}</style>
         </section>
     );
 }
@@ -640,10 +616,6 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
 |--------------------------------------------------------------------------
 | Bottom Wave
 |--------------------------------------------------------------------------
-|
-| Tidak ada garis lurus tambahan.
-| Hanya tiga layer lengkungan hijau.
-|
 */
 
 function HeroBottomWave() {
@@ -655,15 +627,11 @@ function HeroBottomWave() {
                 inset-x-0
                 bottom-0
                 z-20
-                h-36
+                h-28
                 overflow-hidden
-                sm:h-40
+                sm:h-32
             "
         >
-            {/* =====================================================
-                LAYER 1 — DARK EMERALD
-            ===================================================== */}
-
             <svg
                 className="
                     absolute
@@ -686,56 +654,9 @@ function HeroBottomWave() {
                         L0 180
                         Z
                     "
-                    fill="rgba(2,68,57,0.94)"
+                    fill="rgba(2,68,57,0.92)"
                 />
-            </svg>
 
-            {/* =====================================================
-                LAYER 2 — EMERALD
-            ===================================================== */}
-
-            <svg
-                className="
-                    absolute
-                    bottom-0
-                    left-0
-                    h-[88%]
-                    w-full
-                "
-                viewBox="0 0 1440 180"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-            >
-                <path
-                    d="
-                        M0 125
-                        C180 165 350 155 530 115
-                        C720 72 860 85 1020 125
-                        C1190 165 1300 150 1440 115
-                        L1440 180
-                        L0 180
-                        Z
-                    "
-                    fill="rgba(5,150,105,0.78)"
-                />
-            </svg>
-
-            {/* =====================================================
-                LAYER 3 — FINAL MINT
-            ===================================================== */}
-
-            <svg
-                className="
-                    absolute
-                    bottom-0
-                    left-0
-                    h-[55%]
-                    w-full
-                "
-                viewBox="0 0 1440 180"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-            >
                 <path
                     d="
                         M0 130
