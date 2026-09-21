@@ -17,7 +17,12 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h6 class="card-title mb-0">Users</h6>
-                        <a href="javascript:void(0)" id="btnNewUser" class="btn btn-primary btn-sm">+ New</a>
+
+                        <div class="d-flex gap-2">
+
+
+                            <a href="javascript:void(0)" id="btnNewUser" class="btn btn-primary btn-sm">+ New</a>
+                        </div>
                     </div>
 
                     @if (session('success'))
@@ -68,6 +73,16 @@
                         <input type="password" name="password" id="userPassword" class="form-control"
                             placeholder="(leave blank to keep)">
                     </div>
+                    <div class="col-12">
+                        <label class="form-label">Role</label>
+                        <select name="roles[]" id="userRole" class="form-select">
+                            <option value="">-- Select Role --</option>
+                            @foreach ($roles ?? collect() as $roleName => $roleLabel)
+                                <option value="{{ $roleName }}">{{ $roleLabel }}</option>
+                            @endforeach
+                        </select>
+                        <div class="invalid-feedback" id="userRoleErr"></div>
+                    </div>
                     {{-- Field Active DIHAPUS --}}
                 </div>
                 <div class="modal-footer">
@@ -105,6 +120,8 @@
             const $name = $('#userName');
             const $email = $('#userEmail');
             const $pass = $('#userPassword');
+            const $role = $('#userRole');
+            const $roleErr = $('#userRoleErr');
             const $nameErr = $('#userNameErr');
             const $emailErr = $('#userEmailErr');
 
@@ -117,9 +134,10 @@
             });
 
             function clearErrors() {
-                [$name, $email].forEach($f => $f.removeClass('is-invalid'));
+                [$name, $email, $role].forEach($f => $f.removeClass('is-invalid'));
                 $nameErr.text('');
                 $emailErr.text('');
+                $roleErr.text('');
             }
 
             function toastOk(msg) {
@@ -210,8 +228,12 @@
                 $title.text('Edit');
                 // pakai payload dulu, kalau kosong fallback ke data-* lama
                 $name.val(payload.name ?? $btn.data('name') ?? '');
-                $('#roleGroup, #userEmail, #permGroup') // pilih yang relevan per halaman
-                    .val(payload.group_name ?? payload.email ?? $btn.data('group-name') ?? '');
+                $email.val(payload.email ?? $btn.data('email') ?? '');
+                $pass.val('');
+
+                const roles = Array.isArray(payload.roles) ? payload.roles : [];
+                $role.val(roles.length ? roles[0] : '');
+
                 bsModal.show();
             });
 
@@ -225,6 +247,7 @@
                     name: $name.val(),
                     email: $email.val(),
                     password: $pass.val(),
+                    roles: $role.val() ? [$role.val()] : [],
                 };
                 if (mode === 'edit') data._method = 'PUT';
 
@@ -245,6 +268,10 @@
                             if (errs.email) {
                                 $email.addClass('is-invalid');
                                 $emailErr.text(errs.email[0]);
+                            }
+                            if (errs.roles) {
+                                $role.addClass('is-invalid');
+                                $roleErr.text(errs.roles[0]);
                             }
                             return;
                         }
