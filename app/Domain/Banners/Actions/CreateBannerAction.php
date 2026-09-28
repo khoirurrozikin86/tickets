@@ -32,6 +32,7 @@ class CreateBannerAction
                     'button_url',
                     'sort_order',
                     'is_active',
+                    'pdf_position',
                 ]),
             );
 

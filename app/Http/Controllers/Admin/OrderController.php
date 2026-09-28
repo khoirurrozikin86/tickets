@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Banners\Services\BannerPdfService;
 
 use App\Domain\Orders\Queries\OrderTableQuery;
 use App\Models\Order;
@@ -393,7 +394,9 @@ class OrderController extends Controller
                 'order',
                 'tickets',
                 'qrCodes'
-            )
+            ) + [
+                'pdfBanners' => app(BannerPdfService::class)->activeBanners(),
+            ]
         )
             ->setPaper('a4', 'portrait')
             ->stream(

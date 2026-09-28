@@ -13,6 +13,7 @@ class BannerData
         public ?string $button_url,
         public int $sort_order,
         public bool $is_active,
+        public ?string $pdf_position,
     ) {}
 
     public static function fromArray(array $data): self
@@ -26,6 +27,7 @@ class BannerData
             button_url: $data['button_url'] ?? null,
             sort_order: (int) ($data['sort_order'] ?? 0),
             is_active: (bool) ($data['is_active'] ?? true),
+            pdf_position: $data['pdf_position'] ?? null,
         );
     }
 
@@ -39,6 +41,7 @@ class BannerData
             'button_url' => $this->button_url,
             'sort_order' => $this->sort_order,
             'is_active' => $this->is_active,
+            'pdf_position' => $this->pdf_position,
         ];
     }
 }

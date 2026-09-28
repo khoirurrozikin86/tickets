@@ -124,13 +124,13 @@
         .qr-section {
             width: 100%;
             text-align: center;
-            padding-top: 6mm;
-            padding-bottom: 3mm;
+            padding-top: 4mm;
+            padding-bottom: 2mm;
         }
 
         .qr-box {
             display: inline-block;
-            padding: 3mm;
+            padding: 2.5mm;
             border: 1px solid #dce5df;
             border-radius: 3mm;
             background: #ffffff;
@@ -138,8 +138,8 @@
 
         .qr-code {
             display: block;
-            width: 44mm;
-            height: 44mm;
+            width: 34mm;
+            height: 34mm;
         }
 
         .qr-description {
@@ -360,6 +360,19 @@
             color: #90a49a;
             font-size: 6.5px;
         }
+
+        .pdf-banner {
+            display: block;
+            width: 100%;
+            height: auto;
+            margin: 1mm 0 2mm;
+            border-radius: 2.5mm;
+            page-break-inside: avoid;
+        }
+
+        .pdf-banner-bottom {
+            margin: 2mm 0;
+        }
     </style>
 
 </head>
@@ -423,6 +436,10 @@
                 </table>
 
             </div>
+
+            @if (!empty($pdfBanners['top']))
+                <img src="{{ $pdfBanners['top']['src'] }}" class="pdf-banner" alt="{{ $pdfBanners['top']['alt'] }}">
+            @endif
 
 
             {{-- =====================================================
@@ -696,6 +713,10 @@
 
             </div>
 
+            @if (!empty($pdfBanners['bottom']))
+                <img src="{{ $pdfBanners['bottom']['src'] }}" class="pdf-banner pdf-banner-bottom" alt="{{ $pdfBanners['bottom']['alt'] }}">
+            @endif
+
 
             {{-- =====================================================
              WELCOME
@@ -727,7 +748,6 @@
                 Dusun Semilir
 
             </div>
-
 
         </div>
     @endforeach

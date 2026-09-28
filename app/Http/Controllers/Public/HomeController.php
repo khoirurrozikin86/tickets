@@ -71,6 +71,7 @@ class HomeController extends Controller
 
         $banners = Banner::query()
             ->where('is_active', true)
+            ->whereNull('pdf_position')
             ->orderBy('sort_order')
             ->orderByDesc('id')
             ->get([

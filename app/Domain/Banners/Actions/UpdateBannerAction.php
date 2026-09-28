@@ -25,6 +25,7 @@ class UpdateBannerAction
                 'button_url',
                 'sort_order',
                 'is_active',
+                'pdf_position',
             ]);
 
             $banner->update($data->toArray());
@@ -43,6 +44,7 @@ class UpdateBannerAction
                     'button_url',
                     'sort_order',
                     'is_active',
+                    'pdf_position',
                 ]),
             );
 

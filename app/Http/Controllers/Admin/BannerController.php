@@ -83,6 +83,14 @@ class BannerController extends Controller
                     : '<span class="badge bg-secondary">INACTIVE</span>';
             })
 
+            ->editColumn('pdf_position', function (Banner $banner) {
+                return match ($banner->pdf_position) {
+                    'top' => '<span class="badge bg-info">PDF TOP</span>',
+                    'bottom' => '<span class="badge bg-warning text-dark">PDF BOTTOM</span>',
+                    default => '<span class="text-muted">Website</span>',
+                };
+            })
+
             ->addColumn('actions', function (Banner $banner) {
 
                 $actions = [
@@ -113,6 +121,7 @@ class BannerController extends Controller
                             'button_url' => $banner->button_url,
                             'sort_order' => $banner->sort_order,
                             'is_active' => $banner->is_active,
+                            'pdf_position' => $banner->pdf_position,
                         ],
                     ],
 
@@ -145,6 +154,7 @@ class BannerController extends Controller
                 'title',
                 'sort_order',
                 'is_active',
+                'pdf_position',
                 'actions',
             ])
 

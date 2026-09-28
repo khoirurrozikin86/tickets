@@ -19,6 +19,7 @@ class BannerTableQuery
                 'banners.button_url',
                 'banners.sort_order',
                 'banners.is_active',
+                'banners.pdf_position',
                 'banners.created_at',
             ])
             ->orderBy('banners.sort_order')

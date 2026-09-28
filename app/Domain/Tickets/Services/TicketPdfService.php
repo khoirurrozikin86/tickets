@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tickets\Services;
 
+use App\Domain\Banners\Services\BannerPdfService;
 use App\Models\Order;
 use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -12,6 +13,10 @@ use RuntimeException;
 
 class TicketPdfService
 {
+    public function __construct(
+        private readonly BannerPdfService $bannerPdfService
+    ) {}
+
     public function generateForOrder(Order $order): string
     {
         $order->loadMissing([
@@ -51,6 +56,7 @@ class TicketPdfService
                 'order' => $order,
                 'tickets' => $tickets,
                 'qrCodes' => $qrCodes,
+                'pdfBanners' => $this->bannerPdfService->activeBanners(),
             ]
         )
             ->setPaper('a4', 'portrait')

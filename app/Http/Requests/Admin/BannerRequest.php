@@ -58,6 +58,11 @@ class BannerRequest extends FormRequest
                 'nullable',
                 'boolean',
             ],
+
+            'pdf_position' => [
+                'nullable',
+                Rule::in(['top', 'bottom']),
+            ],
         ];
     }
 }

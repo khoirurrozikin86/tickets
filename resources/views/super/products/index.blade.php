@@ -175,8 +175,13 @@
                             </div>
 
                             <small class="text-muted">
-                                JPG, PNG atau WEBP.
+                                JPG, PNG atau WEBP. Maksimal 5 MB.
                             </small>
+
+                            <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
+                                <strong>Rekomendasi:</strong> 1200 x 800 px (rasio 3:2).
+                                Gambar akan menyesuaikan kartu produk dan dapat ter-crop di sisi.
+                            </div>
 
                         </div>
 
@@ -745,6 +750,19 @@
             $form.on('submit', function(e) {
 
                 e.preventDefault();
+
+                const imageFile =
+                    document.getElementById('image').files[0];
+
+                if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ukuran gambar terlalu besar',
+                        text: 'Maksimal ukuran gambar product adalah 5 MB.'
+                    });
+
+                    return;
+                }
 
                 clearErrors();
 

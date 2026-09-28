@@ -14,6 +14,7 @@ class Banner extends Model
         'button_url',
         'sort_order',
         'is_active',
+        'pdf_position',
     ];
 
     protected $casts = [

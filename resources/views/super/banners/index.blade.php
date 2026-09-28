@@ -40,7 +40,7 @@
                             </h6>
 
                             <p class="text-muted mb-0">
-                                Kelola banner yang tampil pada halaman website.
+                                Kelola banner website dan sponsor e-ticket.
                             </p>
 
                         </div>
@@ -151,6 +151,10 @@
                                         Banner
                                     </th>
 
+                                    <th width="110">
+                                        Tampil Di
+                                    </th>
+
                                     <th width="120">
                                         Button
                                     </th>
@@ -255,6 +259,10 @@ MODAL NEW / EDIT
 
                                 </small>
 
+                                <div id="banner-image-guidance" class="alert alert-info py-2 px-3 mt-2 mb-0 small">
+                                    <strong>Website:</strong> gunakan ukuran ideal 2400 x 1200 px dengan rasio 2:1.
+                                </div>
+
 
                                 {{-- IMAGE PREVIEW --}}
 
@@ -312,6 +320,24 @@ MODAL NEW / EDIT
                                 {{-- BUTTON --}}
 
                                 <div class="row">
+
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label">
+                                            Tampil Di
+                                        </label>
+
+                                        <select name="pdf_position" id="banner-pdf-position" class="form-select">
+                                            <option value="">Website saja</option>
+                                            <option value="top">PDF TOP</option>
+                                            <option value="bottom">PDF BOTTOM</option>
+                                        </select>
+
+                                        <small class="text-muted d-block mt-1">
+                                            Banner aktif pertama per posisi dipakai pada e-ticket.
+                                        </small>
+
+                                    </div>
 
                                     <div class="col-md-6 mb-3">
 
@@ -534,6 +560,20 @@ SCRIPT
                 document.getElementById('banner-form');
 
 
+            const imageGuidance =
+                document.getElementById('banner-image-guidance');
+
+
+            const updateImageGuidance = function() {
+                const position =
+                    $('#banner-pdf-position').val();
+
+                imageGuidance.innerHTML = position
+                    ? '<strong>PDF:</strong> gunakan ukuran ideal 1200 x 130 px dengan rasio sekitar 9:1.'
+                    : '<strong>Website:</strong> gunakan ukuran ideal 2400 x 1200 px dengan rasio 2:1.';
+            };
+
+
             let editingId = null;
 
 
@@ -588,6 +628,15 @@ SCRIPT
 
 
                     {
+                        data: 'pdf_position',
+                        name: 'pdf_position',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center'
+                    },
+
+
+                    {
                         data: 'button_text',
                         name: 'button_text',
 
@@ -628,7 +677,7 @@ SCRIPT
 
 
                 order: [
-                    [3, 'asc']
+                    [4, 'asc']
                 ],
 
 
@@ -761,6 +810,12 @@ SCRIPT
                         .val('0');
 
 
+                    $('#banner-pdf-position')
+                        .val('');
+
+                    updateImageGuidance();
+
+
                     /*
                     | Reset preview
                     */
@@ -829,6 +884,12 @@ SCRIPT
                     reader.readAsDataURL(file);
 
                 }
+            );
+
+
+            $('#banner-pdf-position').on(
+                'change',
+                updateImageGuidance
             );
 
 
@@ -943,10 +1004,19 @@ SCRIPT
                         );
 
 
+                    $('#banner-pdf-position')
+                        .val(
+                            payload.pdf_position || ''
+                        );
+
+
                     $('#banner-status')
                         .val(
                             payload.is_active ? '1' : '0'
                         );
+
+
+                    updateImageGuidance();
 
 
                     /*
@@ -1031,6 +1101,19 @@ SCRIPT
 
                     const submitButton =
                         $('#btn-save-banner');
+
+                    const imageFile =
+                        document.getElementById('banner-image').files[0];
+
+                    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ukuran gambar terlalu besar',
+                            text: 'Maksimal ukuran banner adalah 5 MB.'
+                        });
+
+                        return;
+                    }
 
 
                     const formData =

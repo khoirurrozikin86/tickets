@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Banners\Services\BannerPdfService;
 use App\Domain\Tickets\Actions\CancelTicketAction;
 use App\Domain\Tickets\Queries\TicketTableQuery;
 use App\Http\Controllers\Controller;
@@ -362,7 +363,9 @@ class TicketController extends Controller
             compact(
                 'ticket',
                 'qrBase64'
-            )
+            ) + [
+                'pdfBanners' => app(BannerPdfService::class)->activeBanners(),
+            ]
         )
             ->setPaper('a4', 'portrait')
             ->stream(
