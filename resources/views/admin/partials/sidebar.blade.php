@@ -22,6 +22,16 @@
                 </li>
             @endcan
 
+            @can('dashboard.view')
+                <li class="nav-item">
+                    <a href="{{ route('super.website-analytics.index') }}"
+                        class="nav-link {{ request()->routeIs('super.website-analytics.*') ? 'active' : '' }}">
+                        <i class="link-icon" data-feather="bar-chart-2"></i>
+                        <span class="link-title">Trafik Website</span>
+                    </a>
+                </li>
+            @endcan
+
             {{-- ================= ACCESS CONTROL ================= --}}
             @canany(['user.menu', 'role.menu', 'permission.menu'])
                 <li class="nav-item nav-category">Access Control</li>

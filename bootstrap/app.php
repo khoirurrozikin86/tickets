@@ -6,6 +6,7 @@ use Spatie\Permission\Middleware\{RoleMiddleware, PermissionMiddleware, RoleOrPe
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\CaptureMarketingAttribution;
+use App\Http\Middleware\RecordWebsiteVisit;
 use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Middleware Inertia
         $middleware->web(append: [
             CaptureMarketingAttribution::class,
+            RecordWebsiteVisit::class,
             HandleInertiaRequests::class,
         ]);
 

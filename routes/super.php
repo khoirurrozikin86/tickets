@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     DiscountUsageController,
     ScanController,
+    WebsiteAnalyticsController,
 };
 
 Route::middleware(['auth'])
@@ -556,5 +557,15 @@ Route::middleware(['auth'])
                 Route::get('/monitoring/dt', [ScanController::class, 'dt'])
                     ->middleware('permission:tickets.view')
                     ->name('monitoring.dt');
+            });
+
+        Route::prefix('website-analytics')
+            ->name('website-analytics.')
+            ->middleware('permission:dashboard.view')
+            ->group(function () {
+                Route::get('/', [WebsiteAnalyticsController::class, 'index'])
+                    ->name('index');
+                Route::get('/export', [WebsiteAnalyticsController::class, 'export'])
+                    ->name('export');
             });
     });

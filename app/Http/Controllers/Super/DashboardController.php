@@ -398,7 +398,6 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
-
         /*
         |--------------------------------------------------------------------------
         | RETURN
