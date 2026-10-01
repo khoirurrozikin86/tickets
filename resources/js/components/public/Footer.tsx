@@ -270,16 +270,15 @@ export default function Footer({
                             </h3>
 
                             <p className="mt-1 text-sm font-semibold text-emerald-700">
-                                Wisata Keluarga, Cerita Tak Terlupa
+                                {settings.footer_tagline || 'Wisata Keluarga, Cerita Tak Terlupa'}
                             </p>
 
                             <p className="mt-5 max-w-sm text-sm leading-6 text-slate-600">
-                                Nikmati pengalaman wisata yang seru,
-                                nyaman, dan menyenangkan bersama keluarga.
+                                {settings.footer_description || 'Nikmati pengalaman wisata yang seru, nyaman, dan menyenangkan bersama keluarga.'}
                             </p>
 
                             <div className="mt-5 inline-flex items-center rounded-full border border-emerald-100 bg-white/70 px-4 py-2.5 text-xs font-semibold text-emerald-800 shadow-sm backdrop-blur-sm">
-                                Liburan lebih seru bersama Dusun Semilir
+                                {settings.footer_promo || 'Liburan lebih seru bersama Dusun Semilir'}
                             </div>
                         </div>
 

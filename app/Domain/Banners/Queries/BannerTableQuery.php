@@ -20,6 +20,10 @@ class BannerTableQuery
                 'banners.sort_order',
                 'banners.is_active',
                 'banners.pdf_position',
+                'banners.tracking_source',
+                'banners.tracking_medium',
+                'banners.tracking_campaign',
+                'banners.tracking_content',
                 'banners.created_at',
             ])
             ->orderBy('banners.sort_order')

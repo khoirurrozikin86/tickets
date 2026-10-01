@@ -16,6 +16,8 @@ final readonly class CheckoutData
         public string $phone,
 
         public ?string $voucher,
+
+        public array $attribution,
     ) {}
 
     public static function fromRequest(
@@ -49,6 +51,8 @@ final readonly class CheckoutData
                     )
                 )
                 : null,
+
+            attribution: session('marketing_attribution', []),
         );
     }
 }

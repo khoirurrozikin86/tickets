@@ -82,6 +82,10 @@ class HomeController extends Controller
                 'button_text',
                 'button_url',
                 'sort_order',
+                'tracking_source',
+                'tracking_medium',
+                'tracking_campaign',
+                'tracking_content',
             ])
             ->map(function (Banner $banner) {
                 return [
@@ -97,7 +101,7 @@ class HomeController extends Controller
 
                     'button_text' => $banner->button_text,
 
-                    'button_url' => $banner->button_url,
+                    'button_url' => $this->trackedBannerUrl($banner),
 
                     'sort_order' => $banner->sort_order,
                 ];
@@ -262,6 +266,28 @@ class HomeController extends Controller
      *
      * storage/banners/banner.jpg
      */
+    private function trackedBannerUrl(Banner $banner): ?string
+    {
+        if (!$banner->button_url) {
+            return null;
+        }
+
+        $tracking = array_filter([
+            'utm_source' => $banner->tracking_source,
+            'utm_medium' => $banner->tracking_medium,
+            'utm_campaign' => $banner->tracking_campaign,
+            'utm_content' => $banner->tracking_content,
+        ]);
+
+        if (!$tracking) {
+            return $banner->button_url;
+        }
+
+        return $banner->button_url
+            . (str_contains($banner->button_url, '?') ? '&' : '?')
+            . http_build_query($tracking);
+    }
+
     private function imageUrl(?string $path): ?string
     {
         if (!$path) {

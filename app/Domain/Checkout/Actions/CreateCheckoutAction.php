@@ -102,6 +102,10 @@ class CreateCheckoutAction
                 'payment_status' => 'PENDING',
 
                 'expires_at' => $expiresAt,
+
+                'metadata' => [
+                    'marketing_attribution' => $data->attribution,
+                ],
             ]);
 
             /*

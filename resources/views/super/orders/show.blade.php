@@ -134,6 +134,36 @@
 
             </div>
 
+            @php
+                $marketing = $order->metadata['marketing_attribution'] ?? [];
+            @endphp
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Sumber Pembelian</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-3">
+                            <label class="text-muted small">Source</label>
+                            <div class="fw-semibold">{{ $marketing['source'] ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">Medium</label>
+                            <div class="fw-semibold">{{ $marketing['medium'] ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">Campaign</label>
+                            <div class="fw-semibold">{{ $marketing['campaign'] ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">Content</label>
+                            <div class="fw-semibold">{{ $marketing['content'] ?? '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 
             {{-- CUSTOMER --}}
             <div class="card mb-4">

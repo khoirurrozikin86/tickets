@@ -139,6 +139,36 @@ class SiteSettingSeeder extends Seeder
                 'description' => 'Copyright footer.',
                 'is_active' => true,
             ],
+
+            [
+                'key' => 'footer_tagline',
+                'label' => 'Footer Tagline',
+                'value' => 'Wisata Keluarga, Cerita Tak Terlupa',
+                'type' => 'text',
+                'group' => 'FOOTER',
+                'description' => 'Tagline pada bagian brand footer.',
+                'is_active' => true,
+            ],
+
+            [
+                'key' => 'footer_description',
+                'label' => 'Footer Description',
+                'value' => 'Nikmati pengalaman wisata yang seru, nyaman, dan menyenangkan bersama keluarga.',
+                'type' => 'textarea',
+                'group' => 'FOOTER',
+                'description' => 'Deskripsi singkat pada footer.',
+                'is_active' => true,
+            ],
+
+            [
+                'key' => 'footer_promo',
+                'label' => 'Footer Promo Text',
+                'value' => 'Liburan lebih seru bersama Dusun Semilir',
+                'type' => 'text',
+                'group' => 'FOOTER',
+                'description' => 'Kalimat promo pada footer.',
+                'is_active' => true,
+            ],
         ];
 
         foreach ($settings as $setting) {

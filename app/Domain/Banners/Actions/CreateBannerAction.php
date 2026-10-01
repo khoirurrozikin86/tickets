@@ -33,6 +33,10 @@ class CreateBannerAction
                     'sort_order',
                     'is_active',
                     'pdf_position',
+                    'tracking_source',
+                    'tracking_medium',
+                    'tracking_campaign',
+                    'tracking_content',
                 ]),
             );
 

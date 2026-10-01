@@ -31,6 +31,7 @@ class OrderTableQuery
                 'orders.paid_at',
                 'orders.cancelled_at',
                 'orders.completed_at',
+                'orders.metadata',
                 'orders.created_at',
             ])
             ->orderByDesc('orders.created_at');

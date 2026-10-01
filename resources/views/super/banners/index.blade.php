@@ -358,10 +358,57 @@ MODAL NEW / EDIT
                                         </label>
 
                                         <input type="text" name="button_url" id="banner-button-url"
-                                            class="form-control" placeholder="/tickets">
+                                            class="form-control" placeholder="/">
 
                                     </div>
 
+                                </div>
+
+
+                                <div class="border rounded p-3 mb-3">
+                                    <div class="fw-semibold mb-2">Tracking Campaign</div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Source</label>
+                                            <select name="tracking_source" id="banner-tracking-source" class="form-select">
+                                                <option value="">Tidak digunakan</option>
+                                                <option value="website_dusun_semilir">Website Dusun Semilir</option>
+                                                <option value="instagram">Instagram</option>
+                                                <option value="tiktok">TikTok</option>
+                                                <option value="facebook">Facebook</option>
+                                                <option value="youtube">YouTube</option>
+                                                <option value="google">Google</option>
+                                                <option value="whatsapp">WhatsApp</option>
+                                                <option value="other">Lainnya</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Medium</label>
+                                            <input type="text" name="tracking_medium" id="banner-tracking-medium"
+                                                class="form-control" placeholder="social, ads, story">
+                                        </div>
+                                        <div class="col-md-6 mb-0">
+                                            <label class="form-label">Campaign</label>
+                                            <input type="text" name="tracking_campaign" id="banner-tracking-campaign"
+                                                class="form-control" placeholder="promo_september">
+                                        </div>
+                                        <div class="col-md-6 mb-0">
+                                            <label class="form-label">Content</label>
+                                            <input type="text" name="tracking_content" id="banner-tracking-content"
+                                                class="form-control" placeholder="banner_utama">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">
+                                        Link banner otomatis diberi parameter tracking untuk mengetahui asal pembelian.
+                                    </small>
+
+                                    <div class="input-group mt-3">
+                                        <input type="text" id="banner-tracking-link" class="form-control" readonly
+                                            placeholder="Tracking link akan tampil di sini">
+                                        <button type="button" class="btn btn-outline-primary" id="btn-copy-tracking-link">
+                                            <i data-feather="copy"></i> Copy Link
+                                        </button>
+                                    </div>
                                 </div>
 
 
@@ -571,6 +618,34 @@ SCRIPT
                 imageGuidance.innerHTML = position
                     ? '<strong>PDF:</strong> gunakan ukuran ideal 1200 x 130 px dengan rasio sekitar 9:1.'
                     : '<strong>Website:</strong> gunakan ukuran ideal 2400 x 1200 px dengan rasio 2:1.';
+            };
+
+
+            const updateTrackingLink = function() {
+                const buttonUrl = $('#banner-button-url').val().trim();
+
+                if (!buttonUrl) {
+                    $('#banner-tracking-link').val('');
+                    return;
+                }
+
+                const url = new URL(buttonUrl, window.location.origin);
+                const parameters = {
+                    utm_source: $('#banner-tracking-source').val(),
+                    utm_medium: $('#banner-tracking-medium').val().trim(),
+                    utm_campaign: $('#banner-tracking-campaign').val().trim(),
+                    utm_content: $('#banner-tracking-content').val().trim(),
+                };
+
+                Object.entries(parameters).forEach(([key, value]) => {
+                    if (value) {
+                        url.searchParams.set(key, value);
+                    } else {
+                        url.searchParams.delete(key);
+                    }
+                });
+
+                $('#banner-tracking-link').val(url.toString());
             };
 
 
@@ -814,6 +889,7 @@ SCRIPT
                         .val('');
 
                     updateImageGuidance();
+                    updateTrackingLink();
 
 
                     /*
@@ -891,6 +967,27 @@ SCRIPT
                 'change',
                 updateImageGuidance
             );
+
+            $('#banner-button-url, #banner-tracking-source, #banner-tracking-medium, #banner-tracking-campaign, #banner-tracking-content')
+                .on('input change', updateTrackingLink);
+
+            $('#btn-copy-tracking-link').on('click', function() {
+                const link = $('#banner-tracking-link').val();
+
+                if (!link) {
+                    Swal.fire('Lengkapi URL', 'Isi Button URL terlebih dahulu.', 'info');
+                    return;
+                }
+
+                navigator.clipboard.writeText(link).then(function() {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Link tersalin',
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+                });
+            });
 
 
 
@@ -998,6 +1095,30 @@ SCRIPT
                         );
 
 
+                    $('#banner-tracking-source')
+                        .val(
+                            payload.tracking_source || ''
+                        );
+
+
+                    $('#banner-tracking-medium')
+                        .val(
+                            payload.tracking_medium || ''
+                        );
+
+
+                    $('#banner-tracking-campaign')
+                        .val(
+                            payload.tracking_campaign || ''
+                        );
+
+
+                    $('#banner-tracking-content')
+                        .val(
+                            payload.tracking_content || ''
+                        );
+
+
                     $('#banner-sort-order')
                         .val(
                             payload.sort_order ?? 0
@@ -1017,6 +1138,7 @@ SCRIPT
 
 
                     updateImageGuidance();
+                    updateTrackingLink();
 
 
                     /*

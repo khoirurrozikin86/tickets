@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Spatie\Permission\Middleware\{RoleMiddleware, PermissionMiddleware, RoleOrPermissionMiddleware};
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\CaptureMarketingAttribution;
 use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Middleware Inertia
         $middleware->web(append: [
+            CaptureMarketingAttribution::class,
             HandleInertiaRequests::class,
         ]);
 

@@ -63,6 +63,11 @@ class BannerRequest extends FormRequest
                 'nullable',
                 Rule::in(['top', 'bottom']),
             ],
+
+            'tracking_source' => ['nullable', 'string', 'max:100'],
+            'tracking_medium' => ['nullable', 'string', 'max:100'],
+            'tracking_campaign' => ['nullable', 'string', 'max:150'],
+            'tracking_content' => ['nullable', 'string', 'max:150'],
         ];
     }
 }

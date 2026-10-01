@@ -332,6 +332,10 @@
                                     </th>
 
                                     <th>
+                                        Source
+                                    </th>
+
+                                    <th>
                                         Created At
                                     </th>
 
@@ -837,6 +841,20 @@ SCRIPTS
                                 data: 'status',
 
                                 name: 'status',
+
+                                orderable: false,
+
+                                searchable: false,
+
+                                defaultContent: '-'
+
+                            },
+
+
+                            {
+                                data: 'marketing_source',
+
+                                name: 'marketing_source',
 
                                 orderable: false,
 

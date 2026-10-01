@@ -26,6 +26,10 @@ class UpdateBannerAction
                 'sort_order',
                 'is_active',
                 'pdf_position',
+                'tracking_source',
+                'tracking_medium',
+                'tracking_campaign',
+                'tracking_content',
             ]);
 
             $banner->update($data->toArray());
@@ -45,6 +49,10 @@ class UpdateBannerAction
                     'sort_order',
                     'is_active',
                     'pdf_position',
+                    'tracking_source',
+                    'tracking_medium',
+                    'tracking_campaign',
+                    'tracking_content',
                 ]),
             );
 

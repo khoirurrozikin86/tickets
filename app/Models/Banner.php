@@ -15,6 +15,10 @@ class Banner extends Model
         'sort_order',
         'is_active',
         'pdf_position',
+        'tracking_source',
+        'tracking_medium',
+        'tracking_campaign',
+        'tracking_content',
     ];
 
     protected $casts = [

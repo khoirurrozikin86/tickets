@@ -234,6 +234,19 @@ class OrderController extends Controller
                     : '-';
             })
 
+            ->addColumn('marketing_source', function ($order) {
+                $tracking = $order->metadata['marketing_attribution'] ?? [];
+                $source = $tracking['source'] ?? null;
+                $campaign = $tracking['campaign'] ?? null;
+
+                if (!$source && !$campaign) {
+                    return '<span class="text-muted">-</span>';
+                }
+
+                return '<div><strong>' . e($source ?: '-') . '</strong><br><small class="text-muted">'
+                    . e($campaign ?: '-') . '</small></div>';
+            })
+
             /*
             |--------------------------------------------------------------------------
             | Actions
@@ -284,6 +297,7 @@ class OrderController extends Controller
                 'total_amount',
                 'payment_status',
                 'status',
+                'marketing_source',
                 'actions',
             ])
 

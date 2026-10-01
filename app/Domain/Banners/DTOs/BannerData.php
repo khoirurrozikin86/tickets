@@ -14,6 +14,10 @@ class BannerData
         public int $sort_order,
         public bool $is_active,
         public ?string $pdf_position,
+        public ?string $tracking_source,
+        public ?string $tracking_medium,
+        public ?string $tracking_campaign,
+        public ?string $tracking_content,
     ) {}
 
     public static function fromArray(array $data): self
@@ -28,6 +32,10 @@ class BannerData
             sort_order: (int) ($data['sort_order'] ?? 0),
             is_active: (bool) ($data['is_active'] ?? true),
             pdf_position: $data['pdf_position'] ?? null,
+            tracking_source: $data['tracking_source'] ?? null,
+            tracking_medium: $data['tracking_medium'] ?? null,
+            tracking_campaign: $data['tracking_campaign'] ?? null,
+            tracking_content: $data['tracking_content'] ?? null,
         );
     }
 
@@ -42,6 +50,10 @@ class BannerData
             'sort_order' => $this->sort_order,
             'is_active' => $this->is_active,
             'pdf_position' => $this->pdf_position,
+            'tracking_source' => $this->tracking_source,
+            'tracking_medium' => $this->tracking_medium,
+            'tracking_campaign' => $this->tracking_campaign,
+            'tracking_content' => $this->tracking_content,
         ];
     }
 }

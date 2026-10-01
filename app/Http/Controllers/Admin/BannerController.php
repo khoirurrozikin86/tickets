@@ -122,6 +122,10 @@ class BannerController extends Controller
                             'sort_order' => $banner->sort_order,
                             'is_active' => $banner->is_active,
                             'pdf_position' => $banner->pdf_position,
+                            'tracking_source' => $banner->tracking_source,
+                            'tracking_medium' => $banner->tracking_medium,
+                            'tracking_campaign' => $banner->tracking_campaign,
+                            'tracking_content' => $banner->tracking_content,
                         ],
                     ],
 

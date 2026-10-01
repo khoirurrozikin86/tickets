@@ -31,6 +31,10 @@ class UpdateSiteSettingsRequest extends FormRequest
                 'max:255',
             ],
 
+            'settings.footer_tagline' => ['nullable', 'string', 'max:255'],
+            'settings.footer_description' => ['nullable', 'string', 'max:1000'],
+            'settings.footer_promo' => ['nullable', 'string', 'max:255'],
+
             'settings.email' => [
                 'nullable',
                 'email',
