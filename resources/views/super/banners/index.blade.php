@@ -370,7 +370,8 @@ MODAL NEW / EDIT
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Source</label>
-                                            <select name="tracking_source" id="banner-tracking-source" class="form-select">
+                                            <select name="tracking_source" id="banner-tracking-source"
+                                                class="form-select">
                                                 <option value="">Tidak digunakan</option>
                                                 <option value="website_dusun_semilir">Website Dusun Semilir</option>
                                                 <option value="instagram">Instagram</option>
@@ -405,7 +406,8 @@ MODAL NEW / EDIT
                                     <div class="input-group mt-3">
                                         <input type="text" id="banner-tracking-link" class="form-control" readonly
                                             placeholder="Tracking link akan tampil di sini">
-                                        <button type="button" class="btn btn-outline-primary" id="btn-copy-tracking-link">
+                                        <button type="button" class="btn btn-outline-primary"
+                                            id="btn-copy-tracking-link">
                                             <i data-feather="copy"></i> Copy Link
                                         </button>
                                     </div>
@@ -615,9 +617,9 @@ SCRIPT
                 const position =
                     $('#banner-pdf-position').val();
 
-                imageGuidance.innerHTML = position
-                    ? '<strong>PDF:</strong> gunakan ukuran ideal 1200 x 130 px dengan rasio sekitar 9:1.'
-                    : '<strong>Website:</strong> gunakan ukuran ideal 2400 x 1200 px dengan rasio 2:1.';
+                imageGuidance.innerHTML = position ?
+                    '<strong>PDF:</strong> gunakan ukuran ideal 1200 x 130 px dengan rasio sekitar 9:1.' :
+                    '<strong>Website:</strong> gunakan ukuran ideal 2400 x 1200 px dengan rasio 2:1.';
             };
 
 

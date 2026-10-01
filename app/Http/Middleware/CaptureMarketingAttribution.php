@@ -20,7 +20,7 @@ class CaptureMarketingAttribution
             'gclid',
             'fbclid',
             'ttclid',
-        ])->contains(fn (string $key) => filled($query[$key] ?? null));
+        ])->contains(fn(string $key) => filled($query[$key] ?? null));
 
         if ($hasCampaign || $request->headers->has('referer')) {
             $attribution = session('marketing_attribution', []);

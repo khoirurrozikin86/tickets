@@ -681,7 +681,8 @@
     </div>
 
     @if (!empty($pdfBanners['bottom']))
-        <img src="{{ $pdfBanners['bottom']['src'] }}" class="pdf-banner pdf-banner-bottom" alt="{{ $pdfBanners['bottom']['alt'] }}">
+        <img src="{{ $pdfBanners['bottom']['src'] }}" class="pdf-banner pdf-banner-bottom"
+            alt="{{ $pdfBanners['bottom']['alt'] }}">
     @endif
 
 
