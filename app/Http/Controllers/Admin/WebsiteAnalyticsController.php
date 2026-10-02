@@ -8,6 +8,7 @@ use App\Models\WebsiteVisit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -48,15 +49,26 @@ class WebsiteAnalyticsController extends Controller
                 ->groupBy('browser')
                 ->orderByDesc('total')
                 ->get(),
-            'visitorDetails' => (clone $query)
-                ->select('visitor_hash', 'referrer_host', 'device', 'browser')
-                ->selectRaw('COUNT(*) as pageviews')
-                ->selectRaw('MAX(visited_at) as last_seen')
-                ->groupBy('visitor_hash', 'referrer_host', 'device', 'browser')
-                ->orderByDesc('last_seen')
-                ->limit(100)
-                ->get(),
         ]);
+    }
+
+    public function dt(Request $request)
+    {
+        [$dateFrom, $dateTo] = $this->validatedDates($request);
+
+        $query = $this->filteredVisits($dateFrom, $dateTo)
+            ->select('visitor_hash', 'referrer_host', 'device', 'browser')
+            ->selectRaw('COUNT(*) as pageviews')
+            ->selectRaw('MAX(visited_at) as last_seen')
+            ->groupBy('visitor_hash', 'referrer_host', 'device', 'browser')
+            ->orderByDesc('last_seen');
+
+        return DataTables::eloquent($query)
+            ->addColumn('visitor_id', fn ($visit) => substr($visit->visitor_hash, 0, 12))
+            ->addColumn('source', fn ($visit) => $visit->referrer_host ?: 'Direct')
+            ->addColumn('device_browser', fn ($visit) => ucfirst($visit->device) . ' / ' . $visit->browser)
+            ->editColumn('last_seen', fn ($visit) => Carbon::parse($visit->last_seen)->format('d/m/Y H:i'))
+            ->toJson();
     }
 
     public function export(Request $request): BinaryFileResponse
@@ -77,7 +89,7 @@ class WebsiteAnalyticsController extends Controller
         ]);
 
         return [
-            Carbon::parse($validated['date_from'] ?? now()->subDays(6)->toDateString())->startOfDay(),
+            Carbon::parse($validated['date_from'] ?? now()->toDateString())->startOfDay(),
             Carbon::parse($validated['date_to'] ?? now()->toDateString())->endOfDay(),
         ];
     }

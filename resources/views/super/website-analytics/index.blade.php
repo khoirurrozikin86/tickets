@@ -124,7 +124,7 @@
                 identitas pribadi.</small>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table id="website-visits-table" class="table table-hover align-middle mb-0 w-100">
                 <thead>
                     <tr>
                         <th>Visitor ID</th>
@@ -134,23 +134,47 @@
                         <th>Terakhir Dilihat</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @forelse ($visitorDetails as $visitor)
-                        <tr>
-                            <td><code>{{ substr($visitor->visitor_hash, 0, 12) }}</code></td>
-                            <td>{{ $visitor->referrer_host ?: 'Direct' }}</td>
-                            <td>{{ ucfirst($visitor->device) }} / {{ $visitor->browser }}</td>
-                            <td class="text-end">{{ number_format($visitor->pageviews) }}</td>
-                            <td>{{ \Illuminate\Support\Carbon::parse($visitor->last_seen)->format('d/m/Y H:i') }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-4">Belum ada kunjungan pada periode ini.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(function() {
+            $('#website-visits-table').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: false,
+                order: [],
+                pageLength: 25,
+                ajax: {
+                    url: "{{ route('super.website-analytics.dt') }}",
+                    data: function(data) {
+                        data.date_from = $('#date_from').val();
+                        data.date_to = $('#date_to').val();
+                    }
+                },
+                columns: [
+                    { data: 'visitor_id', name: 'visitor_id', orderable: false, searchable: false,
+                        render: function(value) { return '<code>' + $('<div>').text(value).html() + '</code>'; } },
+                    { data: 'source', name: 'referrer_host', orderable: false, searchable: false },
+                    { data: 'device_browser', name: 'device', orderable: false, searchable: false },
+                    { data: 'pageviews', name: 'pageviews', className: 'text-end', orderable: false, searchable: false },
+                    { data: 'last_seen', name: 'last_seen', orderable: false, searchable: false }
+                ],
+                language: {
+                    processing: 'Memuat...',
+                    emptyTable: 'Belum ada kunjungan pada periode ini.',
+                    zeroRecords: 'Belum ada kunjungan pada periode ini.',
+                    info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ visitor',
+                    infoEmpty: 'Tidak ada visitor',
+                    lengthMenu: 'Tampilkan _MENU_ visitor',
+                    paginate: { previous: '‹', next: '›' }
+                }
+            });
+
+        });
+    </script>
+@endpush

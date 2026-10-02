@@ -565,6 +565,8 @@ Route::middleware(['auth'])
             ->group(function () {
                 Route::get('/', [WebsiteAnalyticsController::class, 'index'])
                     ->name('index');
+                Route::get('/dt', [WebsiteAnalyticsController::class, 'dt'])
+                    ->name('dt');
                 Route::get('/export', [WebsiteAnalyticsController::class, 'export'])
                     ->name('export');
             });
