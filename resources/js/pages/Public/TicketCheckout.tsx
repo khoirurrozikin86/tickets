@@ -882,7 +882,7 @@ export default function TicketCheckout({
                         <div className="rounded-[30px] border border-gray-200 bg-white px-10 py-8 shadow-[0_2px_6px_rgba(0,0,0,0.10)]">
 
                             <h2 className="text-center text-[28px] font-bold text-[#171717]">
-                                Ticket Types
+                                Kategori Tiket
                             </h2>
 
 
@@ -1030,8 +1030,7 @@ export default function TicketCheckout({
                                     />
 
                                     <span className="min-w-0 break-words">
-                                        I agree with Term And Condition and
-                                        Privacy Policy of Dusun Semilir
+                                        Saya menyetujui syarat &amp; ketentuannya beserta kebijakan privasi di Dusun Semilir.
                                     </span>
                                 </label>
                             </div>
@@ -1079,7 +1078,7 @@ export default function TicketCheckout({
                                         }
                                         className="mt-4 flex h-11 w-full items-center justify-center rounded-full bg-[#159f79] text-xs font-bold text-white transition hover:bg-[#108b69] disabled:cursor-not-allowed disabled:bg-[#dedede] disabled:text-[#a8a8a8] sm:h-12 sm:text-sm"
                                     >
-                                        CHECKOUT
+                                        PEMBAYARAN
                                     </button>
                                 </div>
                             </div>

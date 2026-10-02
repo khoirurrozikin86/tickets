@@ -136,8 +136,6 @@ interface SocialItem {
 }
 
 function SocialButton({ social }: { social: SocialItem }) {
-    const isYoutube = social.name === 'YouTube';
-
     return (
         <a
             href={social.url}
@@ -156,10 +154,9 @@ function SocialButton({ social }: { social: SocialItem }) {
                 duration-300
                 hover:-translate-y-1
                 hover:shadow-lg
-                ${isYoutube
-                    ? 'h-10 w-12 rounded-[11px]'
-                    : 'h-10 w-10 rounded-full'
-                }
+                h-10
+                w-10
+                rounded-full
                 ${social.className}
             `}
         >
@@ -372,7 +369,13 @@ export default function Footer({
                             </h4>
 
                             {settings.address && (
-                                <div className="mt-5 flex items-start gap-3">
+                                <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Lihat lokasi Dusun Semilir di Google Maps"
+                                    className="group mt-5 flex items-start gap-3"
+                                >
                                     <span
                                         className="
                                             flex h-10 w-10 shrink-0
@@ -381,15 +384,17 @@ export default function Footer({
                                             bg-emerald-500
                                             text-white
                                             shadow-sm
+                                            transition-colors
+                                            group-hover:bg-emerald-600
                                         "
                                     >
                                         <MapPinIcon />
                                     </span>
 
-                                    <p className="max-w-sm text-sm leading-6 text-slate-600">
+                                    <span className="max-w-sm text-sm leading-6 text-slate-600 transition-colors group-hover:text-emerald-700">
                                         {settings.address}
-                                    </p>
-                                </div>
+                                    </span>
+                                </a>
                             )}
                         </div>
 

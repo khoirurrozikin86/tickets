@@ -117,7 +117,7 @@ export default function Checkout({
 
     return (
         <PublicLayout settings={settings}>
-            <Head title="Checkout" />
+            <Head title="Pembayaran" />
 
             <main className="min-h-screen bg-[#f5faf7]">
                 <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
@@ -135,7 +135,7 @@ export default function Checkout({
                         <span>/</span>
 
                         <span className="font-semibold text-[#159f79]">
-                            Checkout
+                            Pembayaran
                         </span>
                     </nav>
 
@@ -144,7 +144,7 @@ export default function Checkout({
                     ====================================================== */}
                     <div className="mb-6 sm:mb-8">
                         <h1 className="text-2xl font-extrabold tracking-tight text-gray-800 sm:text-3xl">
-                            Checkout
+                            Pembayaran
                         </h1>
 
                         <p className="mt-1.5 max-w-2xl text-sm leading-6 text-gray-500 sm:mt-2">
