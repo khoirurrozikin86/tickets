@@ -65,58 +65,6 @@ function SparkleIcon() {
 
 /*
 |--------------------------------------------------------------------------
-| OSIL Mascot
-|--------------------------------------------------------------------------
-*/
-
-function OsilMascot() {
-    return (
-        <div
-            className="
-                relative
-                flex
-                min-h-[180px]
-                items-end
-                justify-center
-                sm:min-h-[200px]
-            "
-        >
-            {/* Simple ground shadow */}
-
-            <div
-                className="
-                    absolute
-                    bottom-4
-                    h-8
-                    w-28
-                    rounded-full
-                    bg-emerald-900/10
-                    blur-md
-                "
-            />
-
-            {/* OSIL */}
-
-            <img
-                src="/images/osil.png"
-                alt="OSIL Dusun Semilir"
-                loading="lazy"
-                className="
-                    relative
-                    z-10
-                    w-32
-                    object-contain
-                    drop-shadow-md
-                    animate-[osilFloat_4s_ease-in-out_infinite]
-                    sm:w-36
-                "
-            />
-        </div>
-    );
-}
-
-/*
-|--------------------------------------------------------------------------
 | Home
 |--------------------------------------------------------------------------
 */
@@ -126,6 +74,20 @@ export default function Home({
     products,
     settings,
 }: HomeProps) {
+    const groupGallery = Array.from({ length: 6 }, (_, index) => {
+        const slot = index + 1;
+        const image = settings[`group_gallery_${slot}`];
+
+        return image ? { image, slot } : null;
+    }).filter((photo): photo is { image: string; slot: number } => photo !== null);
+
+    const bookingNumber = settings.group_booking_whatsapp
+        ?.replace(/\D/g, '')
+        .replace(/^0/, '62');
+    const bookingUrl = bookingNumber
+        ? `https://wa.me/${bookingNumber}?text=${encodeURIComponent('halo admin dusem, mau beli tiket untuk rombongan')}`
+        : null;
+
     return (
         <PublicLayout settings={settings}>
             {/* =========================================================
@@ -343,97 +305,37 @@ export default function Home({
                         OSIL SECTION
                     ================================================= */}
 
-                    <section
-                        className="
-        mt-16
-        overflow-hidden
-        rounded-2xl
-        border
-        border-emerald-200
-        bg-gradient-to-br
-        from-emerald-100
-        via-emerald-50
-        to-green-100
-        shadow-sm
-        sm:mt-20
-    "
-                    >
-                        <div
-                            className="
-            grid
-            items-center
-            gap-6
-            px-6
-            py-8
-            sm:grid-cols-[1fr_auto]
-            sm:px-10
-            sm:py-10
-        "
-                        >
-                            <div className="max-w-xl">
-                                <span
-                                    className="
-                    inline-flex
-                    rounded-full
-                    bg-emerald-600/10
-                    px-3
-                    py-1
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-[0.14em]
-                    text-emerald-700
-                "
+                    <section className="mt-16 sm:mt-20">
+                        <div className="mx-auto mb-7 flex max-w-5xl flex-col items-center text-center">
+                            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+                                Bawa Rombongan?
+                            </h2>
+
+                            {bookingUrl && (
+                                <a
+                                    href={bookingUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-4 inline-flex min-h-12 items-center justify-center rounded-full bg-emerald-600 px-7 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
                                 >
-                                    Teman Liburanmu
-                                </span>
-
-                                <h3
-                                    className="
-                    mt-3
-                    text-2xl
-                    font-bold
-                    leading-tight
-                    tracking-tight
-                    text-emerald-950
-                    sm:text-3xl
-                "
-                                >
-                                    Liburan Lebih Seru
-
-                                    <span className="block text-emerald-600">
-                                        Bersama OSIL
-                                    </span>
-                                </h3>
-
-                                <p
-                                    className="
-                    mt-3
-                    max-w-md
-                    text-sm
-                    leading-6
-                    text-emerald-950/60
-                "
-                                >
-                                    Siap menemani perjalananmu menikmati
-                                    berbagai keseruan di Dusun Semilir.
-                                </p>
-
-                                <div
-                                    className="
-                    mt-5
-                    h-1
-                    w-12
-                    rounded-full
-                    bg-emerald-500
-                "
-                                />
-                            </div>
-
-                            <div className="flex justify-center sm:justify-end">
-                                <OsilMascot />
-                            </div>
+                                    Pesan Rombongan via WhatsApp
+                                </a>
+                            )}
                         </div>
+
+                        {groupGallery.length > 0 && (
+                            <div className="mx-auto grid max-w-5xl grid-cols-2 gap-2 sm:auto-rows-[190px] sm:grid-cols-3 sm:gap-3">
+                                {groupGallery.map((photo) => (
+                                    <img
+                                        key={photo.slot}
+                                        src={photo.image}
+                                        alt={`Suasana rombongan di Dusun Semilir ${photo.slot}`}
+                                        loading="lazy"
+                                        className="aspect-[4/3] h-full w-full rounded-sm object-cover sm:aspect-auto"
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </section>
                 </div>
             </section>

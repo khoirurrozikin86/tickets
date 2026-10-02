@@ -53,6 +53,12 @@ class UpdateSiteSettingsRequest extends FormRequest
                 'max:30',
             ],
 
+            'settings.group_booking_whatsapp' => [
+                'nullable',
+                'string',
+                'max:30',
+            ],
+
             'settings.address' => [
                 'nullable',
                 'string',
@@ -99,6 +105,13 @@ class UpdateSiteSettingsRequest extends FormRequest
                 'mimes:jpg,jpeg,png,webp,svg',
                 'max:5120',
             ],
+
+            'files.group_gallery_1' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
+            'files.group_gallery_2' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
+            'files.group_gallery_3' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
+            'files.group_gallery_4' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
+            'files.group_gallery_5' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
+            'files.group_gallery_6' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
         ];
     }
 }

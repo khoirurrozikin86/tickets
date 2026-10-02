@@ -26,8 +26,8 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             HolidaySeeder::class,
             DiscountSeeder::class,
-            PaymentSeeder::class,
-            TicketSeeder::class,
+            // PaymentSeeder::class,
+            // TicketSeeder::class,
             SiteSettingSeeder::class,
 
         ]);

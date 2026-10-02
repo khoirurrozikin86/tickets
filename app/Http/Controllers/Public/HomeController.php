@@ -247,6 +247,12 @@ class HomeController extends Controller
         if (in_array($key, [
             'logo',
             'favicon',
+            'group_gallery_1',
+            'group_gallery_2',
+            'group_gallery_3',
+            'group_gallery_4',
+            'group_gallery_5',
+            'group_gallery_6',
         ], true)) {
             return $this->imageUrl($value);
         }

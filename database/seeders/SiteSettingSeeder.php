@@ -169,6 +169,26 @@ class SiteSettingSeeder extends Seeder
                 'description' => 'Kalimat promo pada footer.',
                 'is_active' => true,
             ],
+
+            [
+                'key' => 'group_booking_whatsapp',
+                'label' => 'WhatsApp Sales Rombongan',
+                'value' => '08112747724',
+                'type' => 'phone',
+                'group' => 'OSIL',
+                'description' => 'Nomor WhatsApp sales untuk pemesanan tiket rombongan.',
+                'is_active' => true,
+            ],
+
+            ...array_map(fn (int $slot) => [
+                'key' => 'group_gallery_' . $slot,
+                'label' => 'Foto Rombongan ' . $slot,
+                'value' => null,
+                'type' => 'image',
+                'group' => 'OSIL',
+                'description' => 'Foto galeri pemesanan rombongan.',
+                'is_active' => true,
+            ], range(1, 6)),
         ];
 
         foreach ($settings as $setting) {

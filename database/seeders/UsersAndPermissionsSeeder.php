@@ -167,13 +167,13 @@ class UsersAndPermissionsSeeder extends Seeder
         // === 4️⃣ USER DEFAULT & ADMIN & SUPER ===
         $super = User::updateOrCreate(
             ['email' => 'super@example.com'],
-            ['name' => 'Super Admin Stylus', 'password' => Hash::make('password')]
+            ['name' => 'Super Admin Stylus', 'password' => Hash::make('password123!')]
         );
         $super->syncRoles(['super_admin']);
 
         $admin = User::updateOrCreate(
             ['email' => 'admin@example.com'],
-            ['name' => 'Admin Stylus', 'password' => Hash::make('password')]
+            ['name' => 'Admin Stylus', 'password' => Hash::make('password123!')]
         );
         $admin->syncRoles(['admin']);
 

@@ -299,7 +299,11 @@
                                                             accept="image/png,image/jpeg,image/webp,image/svg+xml">
 
                                                         <small class="text-muted">
-                                                            JPG, PNG, WEBP atau SVG.
+                                                            @if (str_starts_with($key, 'group_gallery_'))
+                                                                JPG, PNG, atau WEBP. Minimal 800 × 600 px; disarankan 1200 × 800 px; maksimal 5 MB.
+                                                            @else
+                                                                JPG, PNG, WEBP atau SVG.
+                                                            @endif
                                                         </small>
 
                                                     </div>
