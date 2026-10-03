@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Models\Holiday;
 use App\Models\Product;
 use App\Models\SiteSetting;
 use App\Services\PriceResolver;
@@ -57,6 +58,27 @@ class TicketController extends Controller
             })
             ->toArray();
 
+        $today = Carbon::today();
+        $calendarEnd = $today->copy()->addYears(5)->endOfYear();
+
+        $availableDayTypes = $product->prices()
+            ->where('is_active', true)
+            ->pluck('day_type')
+            ->unique()
+            ->values()
+            ->all();
+
+        $holidayDates = Holiday::query()
+            ->where('is_active', true)
+            ->whereBetween('date', [
+                $today->toDateString(),
+                $calendarEnd->toDateString(),
+            ])
+            ->pluck('date')
+            ->map(fn ($holidayDate) => Carbon::parse($holidayDate)->toDateString())
+            ->values()
+            ->all();
+
         return Inertia::render('Public/TicketCheckout', [
             'product' => [
                 'id' => $product->id,
@@ -79,6 +101,10 @@ class TicketController extends Controller
             'minDate' => now()
                 ->startOfDay()
                 ->toDateString(),
+
+            'availableDayTypes' => $availableDayTypes,
+
+            'holidayDates' => $holidayDates,
 
             'settings' => $settings,
         ]);

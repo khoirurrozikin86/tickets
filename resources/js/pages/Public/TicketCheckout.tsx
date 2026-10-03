@@ -33,6 +33,10 @@ interface Props {
 
     minDate: string;
 
+    availableDayTypes: string[];
+
+    holidayDates: string[];
+
     settings: Record<
         string,
         string | null | undefined
@@ -60,6 +64,16 @@ const MONTH_NAMES = [
     'Desember',
 ];
 
+function getDateDayType(date: string, holidayDates: string[]): string {
+    if (holidayDates.includes(date)) {
+        return 'HOLIDAY';
+    }
+
+    const day = new Date(`${date}T00:00:00`).getDay();
+
+    return day === 0 || day === 6 ? 'WEEKEND' : 'WEEKDAY';
+}
+
 export default function TicketCheckout({
     product,
     selectedDate,
@@ -67,6 +81,8 @@ export default function TicketCheckout({
     price,
     priceError,
     minDate,
+    availableDayTypes,
+    holidayDates,
     settings,
 }: Props) {
     /*
@@ -371,7 +387,12 @@ export default function TicketCheckout({
     function handleDateSelect(
         selected: string
     ) {
-        if (selected < minDate) {
+        if (
+            selected < minDate ||
+            !availableDayTypes.includes(
+                getDateDayType(selected, holidayDates)
+            )
+        ) {
             return;
         }
 
@@ -794,7 +815,10 @@ export default function TicketCheckout({
 
                                         const isDisabled =
                                             item.date <
-                                            minDate;
+                                                minDate ||
+                                            !availableDayTypes.includes(
+                                                getDateDayType(item.date, holidayDates)
+                                            );
 
                                         return (
                                             <button
@@ -819,13 +843,13 @@ export default function TicketCheckout({
                                                     text-[14px]
                                                     transition
 
-                                                    ${isSelected
+                                                    ${isSelected && !isDisabled
                                                         ? 'bg-[#13a77d] font-bold text-white shadow-md'
-                                                        : item.currentMonth
-                                                            ? isDisabled
-                                                                ? 'cursor-not-allowed text-gray-200'
-                                                                : 'text-gray-800 hover:bg-emerald-50 hover:text-emerald-700'
-                                                            : 'text-gray-300'
+                                                        : isDisabled
+                                                            ? 'cursor-not-allowed text-gray-200'
+                                                            : item.currentMonth
+                                                                ? 'text-gray-800 hover:bg-emerald-50 hover:text-emerald-700'
+                                                                : 'text-gray-300 hover:bg-emerald-50 hover:text-emerald-700'
                                                     }
                                                 `}
                                             >
