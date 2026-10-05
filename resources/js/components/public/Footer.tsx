@@ -291,7 +291,7 @@ export default function Footer({
                             <div className="mt-5 space-y-4">
                                 {settings.phone && (
                                     <a
-                                        href={`https://wa.me/${phoneNumber}`}
+                                        href={`https://wa.me/${phoneNumber}?text=${encodeURIComponent('halo admin dusem, mau beli tiket')}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="group flex items-center gap-3"
@@ -370,7 +370,7 @@ export default function Footer({
 
                             {settings.address && (
                                 <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address)}`}
+                                    href="https://maps.app.goo.gl/tEraGpwJLdBYHN936"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     aria-label="Lihat lokasi Dusun Semilir di Google Maps"

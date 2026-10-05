@@ -761,8 +761,7 @@
                 <span class="osil-spark spark-2"></span>
                 <span class="osil-spark spark-3"></span>
 
-                {{-- File osil.png berada di public/osil.png --}}
-                <img src="{{ asset('images/osil.png') }}" alt="OSIL" class="osil-image">
+                <img src="{{ asset('images/osil1.webp') }}" alt="OSIL" class="osil-image">
 
                 <div class="osil-badge">
                     <small>Bersama OSIL</small>

@@ -89,7 +89,7 @@
 
                         <div class="hero-glow"></div>
 
-                        <img src="{{ asset('images/osil.png') }}" alt="OSIL" class="osil-image">
+                        <img src="{{ asset('images/osil1.webp') }}" alt="OSIL" class="osil-image">
 
                         <div class="hero-bubble">
 

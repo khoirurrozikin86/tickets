@@ -1153,7 +1153,7 @@ export default function TicketCheckout({
 
                         <div className="mb-5 flex justify-center">
                             <img
-                                src="/images/osil.png"
+                                src="/images/osil_reminder.webp"
                                 alt="OSIL"
                                 className="h-[230px] w-auto object-contain"
                             />
