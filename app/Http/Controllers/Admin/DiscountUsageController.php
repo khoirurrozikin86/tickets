@@ -33,7 +33,7 @@ class DiscountUsageController extends Controller
     ): JsonResponse {
         $query = DiscountUsage::query()
             ->with([
-                'order:id,order_number,customer_name,customer_email',
+                'order:id,order_number,customer_name,customer_email,customer_phone',
             ])
             ->where('discount_id', $discount->id)
             ->select('discount_usages.*');
@@ -151,6 +151,12 @@ class DiscountUsageController extends Controller
                 );
             })
 
+            ->addColumn('customer_phone', function ($usage) {
+                return e(
+                    $usage->order?->customer_phone ?? '-'
+                );
+            })
+
             ->editColumn('discount_amount', function ($usage) {
                 return 'Rp ' . number_format(
                     (float) $usage->discount_amount,
@@ -170,6 +176,7 @@ class DiscountUsageController extends Controller
                 'order_number',
                 'customer_name',
                 'customer_email',
+                'customer_phone',
                 'discount_amount',
                 'used_at',
             ])

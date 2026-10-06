@@ -45,20 +45,27 @@ class TicketsExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoS
             );
         }
 
-        if (!empty($this->filters['date_from'])) {
-            $query->whereDate(
-                'visit_date',
-                '>=',
-                $this->filters['date_from']
-            );
-        }
+        if (
+            !empty($this->filters['date_from']) ||
+            !empty($this->filters['date_to'])
+        ) {
+            $query->whereHas('order', function (Builder $orderQuery) {
+                if (!empty($this->filters['date_from'])) {
+                    $orderQuery->whereDate(
+                        'created_at',
+                        '>=',
+                        $this->filters['date_from']
+                    );
+                }
 
-        if (!empty($this->filters['date_to'])) {
-            $query->whereDate(
-                'visit_date',
-                '<=',
-                $this->filters['date_to']
-            );
+                if (!empty($this->filters['date_to'])) {
+                    $orderQuery->whereDate(
+                        'created_at',
+                        '<=',
+                        $this->filters['date_to']
+                    );
+                }
+            });
         }
 
         return $query->orderByDesc('created_at');
@@ -72,8 +79,9 @@ class TicketsExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoS
             'Order Number',
             'Customer',
             'Email',
-            'Phone',
+            'No. WhatsApp',
             'Produk',
+            'Checkout At',
             'Visit Date',
             'Status',
             'Issued At',
@@ -96,6 +104,7 @@ class TicketsExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoS
             $ticket->order?->customer_email ?? '-',
             $ticket->order?->customer_phone ?? '-',
             $ticket->product_name,
+            $ticket->order?->created_at?->format('d/m/Y H:i:s') ?? '-',
             $ticket->visit_date?->format('d/m/Y') ?? '-',
             $ticket->status,
             $ticket->issued_at?->format('d/m/Y H:i:s') ?? '-',

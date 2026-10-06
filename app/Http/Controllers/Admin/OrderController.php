@@ -125,6 +125,10 @@ class OrderController extends Controller
                 ';
             })
 
+            ->addColumn('customer_phone', function ($order) {
+                return e($order->customer_phone ?? '-');
+            })
+
             /*
             |--------------------------------------------------------------------------
             | Items
@@ -293,6 +297,7 @@ class OrderController extends Controller
 
             ->rawColumns([
                 'customer',
+                'customer_phone',
                 'items',
                 'total_amount',
                 'payment_status',

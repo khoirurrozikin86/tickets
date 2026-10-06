@@ -164,7 +164,7 @@
                                 <div class="col-12 col-md-6 col-lg-2">
 
                                     <label for="filter-date-from" class="form-label">
-                                        Dari Tanggal
+                                        Checkout Dari
                                     </label>
 
                                     <input type="date" id="filter-date-from" class="form-control">
@@ -176,7 +176,7 @@
                                 <div class="col-12 col-md-6 col-lg-2">
 
                                     <label for="filter-date-to" class="form-label">
-                                        Sampai Tanggal
+                                        Checkout Sampai
                                     </label>
 
                                     <input type="date" id="filter-date-to" class="form-control">
@@ -240,6 +240,14 @@
 
                                     <th>
                                         Customer
+                                    </th>
+
+                                    <th>
+                                        No. WhatsApp
+                                    </th>
+
+                                    <th>
+                                        Checkout At
                                     </th>
 
                                     <th>
@@ -576,6 +584,22 @@ SCRIPTS
                             defaultContent: '-'
                         },
 
+                        {
+                            data: 'customer_phone',
+
+                            name: 'order.customer_phone',
+
+                            defaultContent: '-'
+                        },
+
+                        {
+                            data: 'checkout_at',
+
+                            name: 'order.created_at',
+
+                            defaultContent: '-'
+                        },
+
 
                         {
                             data: 'visit_date',
@@ -647,7 +671,7 @@ SCRIPTS
 
                     order: [
 
-                        [6, 'desc']
+                        [8, 'desc']
 
                     ],
 

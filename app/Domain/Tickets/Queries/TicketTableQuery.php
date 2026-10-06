@@ -11,7 +11,7 @@ class TicketTableQuery
     {
         return Ticket::query()
             ->with([
-                'order:id,customer_name',
+                'order:id,customer_name,customer_phone,created_at',
                 'usedBy:id,name',
                 'product:id,name',
             ])

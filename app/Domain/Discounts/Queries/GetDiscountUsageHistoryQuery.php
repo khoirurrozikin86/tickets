@@ -13,7 +13,7 @@ final class GetDiscountUsageHistoryQuery
     ): LengthAwarePaginator {
         return $discount->usages()
             ->with([
-                'order:id,order_number,customer_name,customer_email',
+                'order:id,order_number,customer_name,customer_email,customer_phone',
             ])
             ->latest('used_at')
             ->paginate($perPage);

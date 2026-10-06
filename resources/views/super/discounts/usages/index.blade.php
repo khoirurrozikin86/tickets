@@ -213,6 +213,7 @@
                                 <th>Order</th>
                                 <th>Customer</th>
                                 <th>Email</th>
+                                <th>No. WhatsApp</th>
                                 <th>Discount</th>
                                 <th>Used At</th>
                             </tr>
@@ -314,6 +315,12 @@
                     },
 
                     {
+                        data: 'customer_phone',
+                        name: 'customer_phone',
+                        orderable: false
+                    },
+
+                    {
                         data: 'discount_amount',
                         name: 'discount_amount',
                         orderable: true
@@ -328,7 +335,7 @@
                 ],
 
                 order: [
-                    [5, 'desc']
+                    [6, 'desc']
                 ],
 
                 pageLength: 25,

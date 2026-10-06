@@ -92,7 +92,7 @@ class OrdersExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSi
             'Order Number',
             'Customer',
             'Email',
-            'Phone',
+            'No. WhatsApp',
             'Items',
             'Subtotal',
             'Discount Code',

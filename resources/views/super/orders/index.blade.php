@@ -316,6 +316,10 @@
                                     </th>
 
                                     <th>
+                                        No. WhatsApp
+                                    </th>
+
+                                    <th>
                                         Item
                                     </th>
 
@@ -796,6 +800,17 @@ SCRIPTS
 
                             },
 
+                            {
+                                data: 'customer_phone',
+
+                                name: 'customer_phone',
+
+                                orderable: false,
+
+                                defaultContent: '-'
+
+                            },
+
 
                             {
                                 data: 'items',
@@ -912,7 +927,7 @@ SCRIPTS
 
                         order: [
 
-                            [6, 'desc']
+                            [7, 'desc']
 
                         ],
 

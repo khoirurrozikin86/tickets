@@ -23,7 +23,7 @@ class DiscountUsagesExport implements
     {
         $query = DiscountUsage::query()
             ->with([
-                'order:id,order_number,customer_name,customer_email',
+                'order:id,order_number,customer_name,customer_email,customer_phone',
             ])
             ->where(
                 'discount_id',
@@ -122,6 +122,7 @@ class DiscountUsagesExport implements
             'Order',
             'Customer',
             'Email',
+            'No. WhatsApp',
             'Discount',
             'Used At',
         ];
@@ -136,6 +137,7 @@ class DiscountUsagesExport implements
             $usage->order?->order_number ?? '-',
             $usage->order?->customer_name ?? '-',
             $usage->order?->customer_email ?? '-',
+            $usage->order?->customer_phone ?? '-',
             (float) $usage->discount_amount,
             $usage->used_at?->format('d/m/Y H:i:s') ?? '-',
         ];

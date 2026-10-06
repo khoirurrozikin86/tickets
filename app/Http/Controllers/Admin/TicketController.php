@@ -84,12 +84,9 @@ class TicketController extends Controller
         }
 
         /*
- * Filter tanggal
- *
- * Default:
- * Jika user tidak memilih tanggal,
- * tampilkan ticket hari ini saja.
- */
+         * Filter berdasarkan tanggal checkout.
+         * Default: tampilkan checkout hari ini.
+         */
         $dateFrom = $request->input(
             'date_from',
             now()->format('Y-m-d')
@@ -100,17 +97,11 @@ class TicketController extends Controller
             now()->format('Y-m-d')
         );
 
-        $builder->whereDate(
-            'tickets.visit_date',
-            '>=',
-            $dateFrom
-        );
-
-        $builder->whereDate(
-            'tickets.visit_date',
-            '<=',
-            $dateTo
-        );
+        $builder->whereHas('order', function ($orderQuery) use ($dateFrom, $dateTo) {
+            $orderQuery
+                ->whereDate('created_at', '>=', $dateFrom)
+                ->whereDate('created_at', '<=', $dateTo);
+        });
 
         return DataTables::eloquent($builder)
 
@@ -121,6 +112,18 @@ class TicketController extends Controller
                 return e(
                     $ticket->order?->customer_name ?? '-'
                 );
+            })
+
+            ->addColumn('customer_phone', function ($ticket) {
+                return e(
+                    $ticket->order?->customer_phone ?? '-'
+                );
+            })
+
+            ->addColumn('checkout_at', function ($ticket) {
+                return $ticket->order?->created_at
+                    ? $ticket->order->created_at->format('d/m/Y H:i:s')
+                    : '-';
             })
 
             /*
