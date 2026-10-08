@@ -25,6 +25,7 @@ class DeleteProductAction
                 'name',
                 'slug',
                 'description',
+                'description_2',
                 'image',
                 'is_active',
                 'sort_order',

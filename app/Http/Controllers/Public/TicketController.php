@@ -85,6 +85,7 @@ class TicketController extends Controller
                 'name' => $product->name,
                 'slug' => $product->slug,
                 'description' => $product->description,
+                'description_2' => $product->description_2,
                 'image' => $this->imageUrl(
                     $product->image
                 ),

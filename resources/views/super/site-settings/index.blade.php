@@ -159,6 +159,33 @@
 
 
                                             {{-- ============================== --}}
+                                            {{-- TOGGLE --}}
+                                            {{-- ============================== --}}
+                                        @elseif ($type === 'toggle')
+                                            <div class="col-md-6 mb-4">
+
+                                                <input type="hidden" name="settings[{{ $key }}]" value="0">
+
+                                                <div class="form-check form-switch">
+                                                    <input type="checkbox" name="settings[{{ $key }}]"
+                                                        id="setting-{{ $key }}" class="form-check-input" value="1"
+                                                        @checked(old('settings.' . $key, $value) === '1')>
+
+                                                    <label class="form-check-label" for="setting-{{ $key }}">
+                                                        {{ $setting->label }}
+                                                    </label>
+                                                </div>
+
+                                                @if ($setting->description)
+                                                    <small class="text-muted">
+                                                        {{ $setting->description }}
+                                                    </small>
+                                                @endif
+
+                                            </div>
+
+
+                                            {{-- ============================== --}}
                                             {{-- EMAIL --}}
                                             {{-- ============================== --}}
                                         @elseif ($type === 'email')
@@ -301,6 +328,8 @@
                                                         <small class="text-muted">
                                                             @if (str_starts_with($key, 'group_gallery_'))
                                                                 JPG, PNG, atau WEBP. Minimal 800 × 600 px; disarankan 1200 × 800 px; maksimal 5 MB.
+                                                            @elseif ($key === 'event_image')
+                                                                JPG, PNG, atau WEBP. Minimal 800 × 600 px; disarankan 1200 × 900 px; maksimal 5 MB.
                                                             @else
                                                                 JPG, PNG, WEBP atau SVG.
                                                             @endif

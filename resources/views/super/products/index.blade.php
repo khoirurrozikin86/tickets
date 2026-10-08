@@ -220,6 +220,23 @@
                         </div>
 
 
+                        {{-- WAHANA YANG DIDAPATKAN --}}
+
+                        <div class="col-md-12">
+
+                            <label class="form-label">
+                                Wahana yang Didapatkan
+                            </label>
+
+                            <textarea class="form-control" id="description_2" name="description_2" rows="4"
+                                placeholder="Contoh: Prosotan, Kereta OSIL, Banyu Bening"></textarea>
+
+                            <div class="invalid-feedback" id="description_2Err">
+                            </div>
+
+                        </div>
+
+
                         {{-- STATUS --}}
 
                         <div class="col-md-12">
@@ -327,6 +344,7 @@
             const $slug = $('#slug');
             const $image = $('#image');
             const $description = $('#description');
+            const $description2 = $('#description_2');
             const $isActive = $('#is_active');
             const $sortOrder = $('#sort_order');
 
@@ -398,6 +416,7 @@
                     $slug,
                     $image,
                     $description,
+                    $description2,
                     $isActive,
                     $sortOrder
 
@@ -412,6 +431,7 @@
                 $slugErr.text('');
                 $imageErr.text('');
                 $descriptionErr.text('');
+                $('#description_2Err').text('');
                 $isActiveErr.text('');
                 $sortOrderErr.text('');
 
@@ -653,6 +673,10 @@
                         payload.description || ''
                     );
 
+                    $description2.val(
+                        payload.description_2 || ''
+                    );
+
 
                     $isActive.val(
                         payload.is_active ?
@@ -890,6 +914,17 @@
                                     .text(
                                         errors.description[0]
                                     );
+
+                            }
+
+
+                            if (errors.description_2) {
+
+                                $description2
+                                    .addClass('is-invalid');
+
+                                $('#description_2Err')
+                                    .text(errors.description_2[0]);
 
                             }
 

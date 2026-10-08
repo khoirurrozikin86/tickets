@@ -12,6 +12,7 @@ export interface Product {
     name: string;
     slug: string;
     description: string | null;
+    description_2: string | null;
     image: string | null;
     is_active: boolean;
     sort_order: number;
@@ -44,7 +45,7 @@ export default function ProductCard({
 
 
     return (
-        <div className="group overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg shadow-emerald-950/5 transition duration-300 hover:-translate-y-2 hover:shadow-2xl">
+        <div className="group flex h-full flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg shadow-emerald-950/5 transition duration-300 hover:-translate-y-2 hover:shadow-2xl">
 
             {/* Image */}
             <div className="relative h-56 overflow-hidden bg-emerald-50">
@@ -69,22 +70,20 @@ export default function ProductCard({
 
 
             {/* Content */}
-            <div className="p-6">
+            <div className="flex flex-1 flex-col p-6">
 
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="line-clamp-2 min-h-[1.75rem] break-words text-xl font-bold text-gray-900">
                     Tiket {product.name}
                 </h3>
 
 
-                {product.description && (
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-500">
-                        {product.description}
-                    </p>
-                )}
+                <p className="mt-2 line-clamp-2 min-h-[3rem] text-sm leading-6 text-gray-500">
+                    {product.description || ''}
+                </p>
 
 
                 {/* Price */}
-                <div className="mt-5 rounded-2xl bg-emerald-50 p-4">
+                <div className="mt-auto rounded-2xl bg-emerald-50 p-4">
 
                     <div className="flex items-center justify-between">
 
@@ -121,7 +120,7 @@ export default function ProductCard({
                 {/* Button */}
                 <Link
                     href={`/tickets/${product.slug}`}
-                    className="mt-5 flex w-full items-center justify-center rounded-2xl bg-emerald-700 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800"
+                    className="mt-3 flex w-full items-center justify-center rounded-2xl bg-emerald-700 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800"
                 >
                     Lihat Tiket
                 </Link>

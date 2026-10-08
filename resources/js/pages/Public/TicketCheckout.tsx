@@ -10,6 +10,7 @@ interface Product {
     name: string;
     slug: string;
     description?: string | null;
+    description_2?: string | null;
 }
 
 interface VoucherResult {
@@ -930,6 +931,12 @@ export default function TicketCheckout({
                                             : 'Rp. 0'}
                                     </p>
                                 </div>
+
+                                {product.description_2 && (
+                                    <p className="mt-3 whitespace-pre-line break-words text-xs leading-5 text-gray-600 sm:text-sm">
+                                        {product.description_2}
+                                    </p>
+                                )}
 
                                 <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
                                     <div>

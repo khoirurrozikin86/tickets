@@ -157,6 +157,7 @@ class HomeController extends Controller
                 'name',
                 'slug',
                 'description',
+                'description_2',
                 'image',
                 'is_active',
                 'sort_order',
@@ -171,6 +172,8 @@ class HomeController extends Controller
                     'slug' => $product->slug,
 
                     'description' => $product->description,
+
+                    'description_2' => $product->description_2,
 
                     'image' => $this->imageUrl(
                         $product->image
@@ -247,6 +250,7 @@ class HomeController extends Controller
         if (in_array($key, [
             'logo',
             'favicon',
+            'event_image',
             'group_gallery_1',
             'group_gallery_2',
             'group_gallery_3',

@@ -71,6 +71,7 @@ class ProductController extends Controller
                             'name' => $product->name,
                             'slug' => $product->slug,
                             'description' => $product->description,
+                            'description_2' => $product->description_2,
                             'image' => $product->image
                                 ? asset('storage/' . $product->image)
                                 : null,

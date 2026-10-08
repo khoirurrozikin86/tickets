@@ -36,6 +36,12 @@ class ProductUpdateRequest extends FormRequest
                 'string',
             ],
 
+            'description_2' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
             'image' => [
                 'nullable',
                 'image',

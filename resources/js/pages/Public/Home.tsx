@@ -211,6 +211,7 @@ export default function Home({
                                 mt-12
                                 grid
                                 gap-6
+                                items-stretch
                                 sm:mt-14
                                 md:grid-cols-2
                                 lg:grid-cols-2
@@ -220,6 +221,7 @@ export default function Home({
                                 <article
                                     key={product.id}
                                     className="
+                                        h-full
                                         animate-[cardFadeIn_.45s_ease-out_both]
                                         transition-transform
                                         duration-300
@@ -299,6 +301,34 @@ export default function Home({
                                 </p>
                             </div>
                         </div>
+                    )}
+
+                    {settings.event_enabled === '1' && (
+                        <section
+                            id="event"
+                            className="mx-auto mt-16 max-w-6xl scroll-mt-28 sm:mt-20"
+                        >
+                            <h2 className="text-center text-2xl font-bold text-slate-900 sm:text-3xl">
+                                {settings.event_title || 'Event & Aktivitas'}
+                            </h2>
+
+                            <div className={`mt-8 grid items-center gap-7 ${settings.event_image ? 'md:grid-cols-2 md:gap-12' : ''}`}>
+                                {settings.event_image && (
+                                    <img
+                                        src={settings.event_image}
+                                        alt={settings.event_title || 'Event Dusun Semilir'}
+                                        loading="lazy"
+                                        className="aspect-[4/3] w-full rounded-xl object-cover"
+                                    />
+                                )}
+
+                                {settings.event_description && (
+                                    <p className="whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base sm:leading-8">
+                                        {settings.event_description}
+                                    </p>
+                                )}
+                            </div>
+                        </section>
                     )}
 
                     {/* =================================================

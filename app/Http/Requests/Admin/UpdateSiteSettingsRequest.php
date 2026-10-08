@@ -34,6 +34,9 @@ class UpdateSiteSettingsRequest extends FormRequest
             'settings.footer_tagline' => ['nullable', 'string', 'max:255'],
             'settings.footer_description' => ['nullable', 'string', 'max:1000'],
             'settings.footer_promo' => ['nullable', 'string', 'max:255'],
+            'settings.event_enabled' => ['required', 'boolean'],
+            'settings.event_title' => ['nullable', 'string', 'max:150'],
+            'settings.event_description' => ['nullable', 'string', 'max:10000'],
 
             'settings.email' => [
                 'nullable',
@@ -112,6 +115,7 @@ class UpdateSiteSettingsRequest extends FormRequest
             'files.group_gallery_4' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
             'files.group_gallery_5' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
             'files.group_gallery_6' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
+            'files.event_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=800,min_height=600'],
         ];
     }
 }
