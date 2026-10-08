@@ -177,6 +177,9 @@ class CreateCheckoutAction
                 'visit_date' =>
                 $pricing['date'],
 
+                'day_type' =>
+                $pricing['day_type'],
+
                 'subtotal' =>
                 $pricing['subtotal'],
             ]);
